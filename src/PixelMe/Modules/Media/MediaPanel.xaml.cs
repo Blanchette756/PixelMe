@@ -76,6 +76,7 @@ public partial class MediaPanel : UserControl
         accent.Freeze();
         ArtistText.Foreground = accent;
         Progress.Accent = accent;
+        Badge.Background = accent;
 
         if (state.Art is null)
         {

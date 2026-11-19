@@ -39,7 +39,7 @@ public sealed class ControlsModule : IslandModule
 
     public override string Glyph => "";
 
-    public override int Priority => 60;
+    public override int Priority => 80;
 
     public override async Task InitializeAsync(CancellationToken cancellationToken)
     {

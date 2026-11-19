@@ -80,9 +80,16 @@ public sealed class AgentsModule : IslandModule
     protected override void Render()
     {
         var waiting = agents.Values.Where(a => a.Signal.State == "waiting").OrderByDescending(a => a.At).FirstOrDefault();
-        if (compactText is not null && waiting.Signal is not null)
+        var latest = waiting.Signal is not null ? waiting : agents.Values.OrderByDescending(a => a.At).FirstOrDefault();
+        if (compactText is not null && latest.Signal is not null)
         {
-            compactText.Text = $"{waiting.Signal.Agent} {Strings.NeedsInput}";
+            var status = latest.Signal.State switch
+            {
+                "waiting" => Strings.NeedsInput,
+                "working" => Strings.AgentIsWorking,
+                _ => Strings.AgentFinished,
+            };
+            compactText.Text = $"{latest.Signal.Agent} {status}";
         }
 
         if (list is null)

@@ -34,7 +34,7 @@ public sealed class CallModule(ModuleServices services) : IslandModule
 
     public override string Glyph => "";
 
-    public override int Priority => 50;
+    public override int Priority => 100;
 
     public override bool HasActivity => callStarted is not null;
 
@@ -93,8 +93,7 @@ public sealed class CallModule(ModuleServices services) : IslandModule
         bigButton.Click += (_, _) => Toggle();
 
         status = Ui.Text(string.Empty, 20, FontWeights.Bold);
-        timer = Ui.Text(string.Empty, 14, FontWeights.SemiBold, "Island.Secondary");
-        timer.SetResourceReference(TextBlock.FontFamilyProperty, "Island.MonoFont");
+        timer = Ui.Text(string.Empty, 13.5, FontWeights.SemiBold, "Island.Secondary");
         hint = Ui.Text(string.Empty, 12.5, null, "Island.Secondary");
         hint.TextWrapping = TextWrapping.Wrap;
 
@@ -182,7 +181,8 @@ public sealed class CallModule(ModuleServices services) : IslandModule
         {
             compactGlyph.Text = glyph;
             compactGlyph.Foreground = brush;
-            compactText.Text = $"{clock}  {(muted ? Strings.Muted : Strings.Live)}";
+            var label = muted ? Strings.MicMuted : Strings.MicLive;
+            compactText.Text = callStarted is null ? label : $"{clock}  {(muted ? Strings.Muted : Strings.Live)}";
         }
 
         if (bigButton is not null && status is not null && timer is not null && hint is not null)

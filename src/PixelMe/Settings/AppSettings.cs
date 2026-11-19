@@ -30,7 +30,9 @@ public enum FullscreenBehavior
 
 public sealed class AppSettings
 {
-    public IslandThemeKind Theme { get; set; } = IslandThemeKind.Glass;
+    public IslandThemeKind Theme { get; set; } = IslandThemeKind.Black;
+
+    public bool OpenOnHover { get; set; }
 
     public IslandStyle Style { get; set; } = IslandStyle.Notch;
 
@@ -74,7 +76,7 @@ public sealed class AppSettings
     {
         if (!Enum.IsDefined(Theme))
         {
-            Theme = IslandThemeKind.Glass;
+            Theme = IslandThemeKind.Black;
         }
 
         if (!Enum.IsDefined(Style))

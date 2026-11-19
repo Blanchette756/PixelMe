@@ -19,6 +19,8 @@ public sealed class ThemePalette
 
     public required Brush Accent { get; init; }
 
+    public Brush Surface { get; init; } = Brushes.Black;
+
     public bool UsesBackdrop { get; init; }
 
     public static ThemePalette For(IslandThemeKind kind)
@@ -28,12 +30,13 @@ public sealed class ThemePalette
         {
             IslandThemeKind.Black => new ThemePalette
             {
-                Background = Solid(0xFF000000),
-                Border = Solid(0x1FFFFFFF),
-                Foreground = Solid(0xFFFFFFFF),
-                Secondary = Solid(0x99FFFFFF),
-                Subtle = Solid(0x1FFFFFFF),
+                Background = Solid(0xFF0A0A0B),
+                Border = Solid(0x00000000),
+                Foreground = Solid(0xFFF2F2F2),
+                Secondary = Solid(0xFF8E8E93),
+                Subtle = Solid(0x2BFFFFFF),
                 Accent = Solid(0xFF34D399),
+                Surface = Solid(0xFF0A0A0B),
             },
             IslandThemeKind.Graphite => new ThemePalette
             {
@@ -43,6 +46,7 @@ public sealed class ThemePalette
                 Secondary = Solid(0x99F4F4F6),
                 Subtle = Solid(0x1FFFFFFF),
                 Accent = Solid(0xFF60A5FA),
+                Surface = Solid(0xFF25262B),
             },
             IslandThemeKind.Light => new ThemePalette
             {
@@ -52,6 +56,7 @@ public sealed class ThemePalette
                 Secondary = Solid(0x99111216),
                 Subtle = Solid(0x14000000),
                 Accent = Solid(0xFF059669),
+                Surface = Solid(0xFFF2F3F6),
                 UsesBackdrop = transparency,
             },
             _ => new ThemePalette
@@ -62,6 +67,7 @@ public sealed class ThemePalette
                 Secondary = Solid(0xB3FFFFFF),
                 Subtle = Solid(0x26FFFFFF),
                 Accent = Solid(0xFF34D399),
+                Surface = Solid(0xFF15161C),
                 UsesBackdrop = transparency,
             },
         };
@@ -73,6 +79,7 @@ public sealed class ThemePalette
         resources["Island.Secondary"] = Secondary;
         resources["Island.Subtle"] = Subtle;
         resources["Island.Accent"] = Accent;
+        resources["Island.Surface"] = Surface;
     }
 
     private static bool TransparencyEnabled()

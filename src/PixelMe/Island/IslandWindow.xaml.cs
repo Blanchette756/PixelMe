@@ -16,11 +16,19 @@ namespace PixelMe.Island;
 
 public partial class IslandWindow : Window
 {
-    private static readonly TimeSpan PeekDuration = TimeSpan.FromSeconds(4);
+    private static readonly TimeSpan FlashDuration = TimeSpan.FromSeconds(4);
+    private const double SmallMarginX = 60;
+    private const double SmallMarginY = 14;
+    private double[]? lastFrame;
 
     private readonly SettingsStore settings;
     private readonly DispatcherTimer expandTimer;
     private readonly DispatcherTimer collapseTimer;
+    private readonly DispatcherTimer bounceTimer = new(DispatcherPriority.Input);
+    private readonly DispatcherTimer flashTimer = new(DispatcherPriority.Background);
+    private IIslandModule? flashModule;
+    private bool hovering;
+    private bool bouncing;
     private readonly SpringAnimator animator;
     private readonly Dictionary<IIslandModule, RadioButton> tabs = [];
     private IReadOnlyList<IIslandModule> modules = [];
@@ -48,6 +56,25 @@ public partial class IslandWindow : Window
         ExpandedHost.Height = IslandMetrics.Expanded.Height;
         SettingsButton.Content = "";
         SettingsButton.Click += (_, _) => SettingsRequested?.Invoke();
+        ThemeButton.Content = "";
+        ThemeButton.Click += (_, _) => settings.Update(s => s.Theme = (IslandThemeKind)(((int)s.Theme + 1) % Enum.GetValues<IslandThemeKind>().Length));
+
+        bounceTimer.Tick += (_, _) =>
+        {
+            bounceTimer.Stop();
+            bouncing = false;
+            if (!expanded)
+            {
+                Retarget(animate: true);
+            }
+        };
+
+        flashTimer.Tick += (_, _) =>
+        {
+            flashTimer.Stop();
+            flashModule = null;
+            RefreshCompact(animate: true);
+        };
 
         style = settings.Current.Style;
         SizeCompactHost();
@@ -70,6 +97,7 @@ public partial class IslandWindow : Window
         };
 
         animator = new SpringAnimator(TargetValues(), ApplyFrame);
+        animator.Settled += ShrinkToFit;
         IsVisibleChanged += (_, _) => backdrop?.SetVisible(IsVisible);
         Deactivated += (_, _) =>
         {
@@ -186,7 +214,14 @@ public partial class IslandWindow : Window
         IslandRoot.MouseEnter += (_, _) =>
         {
             collapseTimer.Stop();
-            if (!expanded && presence == IslandPresence.Normal)
+            if (expanded || presence != IslandPresence.Normal)
+            {
+                return;
+            }
+
+            hovering = true;
+            Retarget(animate: true);
+            if (settings.Current.OpenOnHover)
             {
                 Restart(expandTimer, settings.Current.ExpandDelayMs);
             }
@@ -195,9 +230,18 @@ public partial class IslandWindow : Window
         IslandRoot.MouseLeave += (_, _) =>
         {
             expandTimer.Stop();
+            if (hovering)
+            {
+                hovering = false;
+                if (!expanded)
+                {
+                    Retarget(animate: true);
+                }
+            }
+
             if (expanded && !(keyboard && IsActive))
             {
-                Restart(collapseTimer, settings.Current.CollapseDelayMs);
+                Restart(collapseTimer, settings.Current.CollapseDelayMs + 250);
             }
         };
 
@@ -212,6 +256,8 @@ public partial class IslandWindow : Window
             {
                 expandTimer.Stop();
                 SetExpanded(true);
+                e.Handled = true;
+                return;
             }
 
             if (e.OriginalSource is DependencyObject source && WantsKeyboard(source))
@@ -246,6 +292,7 @@ public partial class IslandWindow : Window
     public void RefreshText()
     {
         SettingsButton.ToolTip = Strings.Settings;
+        ThemeButton.ToolTip = Strings.ChangeTheme;
         foreach (var module in modules)
         {
             if (tabs.TryGetValue(module, out var tab))
@@ -309,6 +356,8 @@ public partial class IslandWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        bounceTimer.Stop();
+        flashTimer.Stop();
         foreach (var module in modules)
         {
             module.ActivityChanged -= OnModuleActivityChanged;
@@ -449,17 +498,24 @@ public partial class IslandWindow : Window
             }
 
             SelectTab(module);
-            if (!expanded)
+            if (expanded)
             {
-                SetExpanded(true);
-                Restart(collapseTimer, PeekDuration.TotalMilliseconds);
+                return;
             }
+
+            flashModule = module;
+            Restart(flashTimer, FlashDuration.TotalMilliseconds);
+            RefreshCompact(animate: true);
+            bouncing = true;
+            Retarget(animate: true);
+            Restart(bounceTimer, 180);
         });
     }
 
     private void RefreshCompact(bool animate)
     {
-        var active = modules.Where(SafeHasActivity).OrderBy(m => m.ActivityRank).FirstOrDefault()
+        var active = (flashModule is not null && modules.Contains(flashModule) ? flashModule : null)
+            ?? modules.Where(SafeHasActivity).OrderBy(m => m.ActivityRank).FirstOrDefault()
             ?? modules.FirstOrDefault(m => !m.ShowsTab)
             ?? modules.FirstOrDefault();
 
@@ -498,7 +554,8 @@ public partial class IslandWindow : Window
         }
 
         expanded = value;
-        if (expanded && compactModule is not null && compactModule.ShowsTab && SafeHasActivity(compactModule))
+        hovering = false;
+        if (expanded && compactModule is not null && compactModule.ShowsTab && (SafeHasActivity(compactModule) || compactModule == flashModule))
         {
             SelectTab(compactModule);
         }
@@ -523,23 +580,75 @@ public partial class IslandWindow : Window
         var shape = presence == IslandPresence.Strip
             ? IslandMetrics.Strip(style)
             : expanded ? IslandMetrics.Expanded : IslandMetrics.Compact(style, compactWidth);
+
+        if (!expanded && presence == IslandPresence.Normal && (bouncing || hovering))
+        {
+            var growth = bouncing ? IslandMetrics.BounceGrowth : IslandMetrics.HoverGrowth;
+            shape = shape with { Width = shape.Width + growth, Height = shape.Height + (growth / 4) };
+        }
+
         return [shape.Width, shape.Height, shape.Radius, expanded ? 1 : 0];
     }
 
     private void Retarget(bool animate)
     {
-        if (animate)
+        var target = TargetValues();
+        if (expanded)
         {
-            animator.AnimateTo(TargetValues());
+            SetExtent(IslandMetrics.WindowWidth, IslandMetrics.WindowHeight);
         }
         else
         {
-            animator.JumpTo(TargetValues());
+            var shoulder = style == IslandStyle.Notch ? IslandMetrics.ShoulderRadius * 2 : 0;
+            var top = style == IslandStyle.Notch ? 0 : IslandMetrics.FloatingGap;
+            var width = Math.Max(target[0], layout.Width) + shoulder;
+            var height = Math.Max(target[1], layout.Height) + top;
+            SetExtent(Math.Max(width + SmallMarginX, Width), Math.Max(height + SmallMarginY, Height));
+        }
+
+        if (animate)
+        {
+            animator.AnimateTo(target);
+        }
+        else
+        {
+            animator.JumpTo(target);
+        }
+    }
+
+    private void ShrinkToFit()
+    {
+        if (expanded || handle == IntPtr.Zero)
+        {
+            return;
+        }
+
+        var shoulder = style == IslandStyle.Notch ? IslandMetrics.ShoulderRadius * 2 : 0;
+        var top = style == IslandStyle.Notch ? 0 : IslandMetrics.FloatingGap;
+        SetExtent(layout.Width + shoulder + SmallMarginX, layout.Height + top + SmallMarginY);
+    }
+
+    private void SetExtent(double width, double height)
+    {
+        width = Math.Min(IslandMetrics.WindowWidth, Math.Ceiling(width));
+        height = Math.Min(IslandMetrics.WindowHeight, Math.Ceiling(height));
+        if (Math.Abs(width - Width) < 0.5 && Math.Abs(height - Height) < 0.5)
+        {
+            return;
+        }
+
+        Width = width;
+        Height = height;
+        Reposition();
+        if (lastFrame is not null)
+        {
+            ApplyFrame(lastFrame);
         }
     }
 
     private void ApplyFrame(double[] values)
     {
+        lastFrame = values;
         var width = Math.Max(values[0], 24);
         var height = Math.Max(values[1], 12);
         var radius = Math.Clamp(values[2], 0, Math.Min(width, height) / 2);
@@ -547,7 +656,7 @@ public partial class IslandWindow : Window
         var notch = style == IslandStyle.Notch;
         var shoulder = notch ? IslandMetrics.ShoulderRadius : 0;
         var top = notch ? 0 : IslandMetrics.FloatingGap;
-        var left = (IslandMetrics.WindowWidth - (width + (shoulder * 2))) / 2;
+        var left = (Width - (width + (shoulder * 2))) / 2;
         var strip = presence == IslandPresence.Strip;
 
         layout = new FrameLayout(left, top, width, height, radius, shoulder, notch);
@@ -562,6 +671,7 @@ public partial class IslandWindow : Window
         Surface.Clip = IslandGeometry.Outline(width, height, radius, 0, notch, 1);
 
         Canvas.SetLeft(CompactHost, (width - CompactHost.Width) / 2);
+        Canvas.SetTop(CompactHost, expanded ? 0 : Math.Max(0, (height - CompactHost.Height) / 2));
         Canvas.SetLeft(ExpandedHost, (width - ExpandedHost.Width) / 2);
         Canvas.SetLeft(StripText, (width - IslandMetrics.StripTextWidth) / 2);
         Canvas.SetTop(StripText, Math.Max(0, (height - 16) / 2));

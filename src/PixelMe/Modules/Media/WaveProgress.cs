@@ -40,7 +40,7 @@ public sealed class WaveProgress : FrameworkElement
     private const double Amplitude = 3.2;
     private const double Wavelength = 22;
     private const double Speed = 5.5;
-    private const double FrameMilliseconds = 33;
+    private const double FrameMilliseconds = 48;
 
     private readonly Stopwatch clock = new();
     private TimeSpan lastFrame;

@@ -69,7 +69,7 @@ public sealed class MediaCompact : Grid
             pulse.Children.Add(animation);
         }
 
-        Timeline.SetDesiredFrameRate(pulse, 24);
+        Timeline.SetDesiredFrameRate(pulse, 20);
         Children.Add(bars);
         IsVisibleChanged += (_, _) => UpdatePulse();
     }

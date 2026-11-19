@@ -206,7 +206,7 @@ public sealed class WidgetsModule(ModuleServices services) : IslandModule
         input.FontSize = 12;
         RenderTodos();
         var list = Ui.Scroll(todoList);
-        list.Height = 110;
+        list.Height = 82;
         return Ui.Column(6, Caption(Strings.Todo), input, list);
     }
 

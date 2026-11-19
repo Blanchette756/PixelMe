@@ -299,6 +299,14 @@ public static class Strings
 
     public static string FullscreenStay => T("Keep the island", "Tetap tampilkan island");
 
+    public static string OpenOnHoverSetting => T("Open the island when the mouse hovers it (instead of clicking)", "Buka island saat mouse diarahkan (bukan diklik)");
+
+    public static string ChangeTheme => T("Change theme", "Ganti tema");
+
+    public static string AgentFinished => T("finished", "selesai");
+
+    public static string AgentIsWorking => T("is working", "sedang bekerja");
+
     public static string MicHotkeySetting => T("Ctrl+Alt+M mutes the microphone", "Ctrl+Alt+M membisukan mikrofon");
 
     public static string LyricsSetting => T("Show synced lyrics (looks up songs on lrclib.net)", "Tampilkan lirik (mencari lagu di lrclib.net)");

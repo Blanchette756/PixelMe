@@ -47,7 +47,7 @@ public sealed class MediaModule(ModuleServices services) : IIslandModule
 
     public bool HasActivity => state.HasSession && state.IsPlaying;
 
-    public double CompactWidth => 250;
+    public double CompactWidth => 230;
 
     public FrameworkElement CompactView => compact ??= CreateCompact();
 

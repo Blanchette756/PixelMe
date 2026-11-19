@@ -49,7 +49,7 @@ public sealed class RemindersModule : IslandModule
 
     public override string Glyph => "";
 
-    public override int Priority => 40;
+    public override int Priority => 95;
 
     public override bool HasActivity => data.Items.Count > 0;
 

@@ -37,7 +37,7 @@ public sealed class ShelfModule : IslandModule, IFileDropTarget
 
     public override string Glyph => "";
 
-    public override int Priority => 30;
+    public override int Priority => 50;
 
     public override Task InitializeAsync(CancellationToken cancellationToken)
     {

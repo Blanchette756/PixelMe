@@ -27,6 +27,8 @@ public sealed class SpringAnimator
         apply(values);
     }
 
+    public event Action? Settled;
+
     public double Stiffness { get; set; } = 420;
 
     public double Damping { get; set; } = 36;
@@ -52,6 +54,7 @@ public sealed class SpringAnimator
         Array.Clear(velocities);
         Stop();
         apply(values);
+        Settled?.Invoke();
     }
 
     private void CopyTargets(double[] next)
@@ -98,7 +101,8 @@ public sealed class SpringAnimator
             }
         }
 
-        if (IsAtRest())
+        var settled = IsAtRest();
+        if (settled)
         {
             Array.Copy(targets, values, values.Length);
             Array.Clear(velocities);
@@ -106,6 +110,10 @@ public sealed class SpringAnimator
         }
 
         apply(values);
+        if (settled)
+        {
+            Settled?.Invoke();
+        }
     }
 
     private bool IsAtRest()

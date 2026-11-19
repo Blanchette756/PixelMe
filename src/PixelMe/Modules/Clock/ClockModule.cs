@@ -29,7 +29,7 @@ public sealed class ClockModule : IslandModule
 
     public override int ActivityRank => 1000;
 
-    public override double CompactWidth => 180;
+    public override double CompactWidth => 170;
 
     public override Task InitializeAsync(CancellationToken cancellationToken)
     {
@@ -56,15 +56,15 @@ public sealed class ClockModule : IslandModule
 
     protected override FrameworkElement BuildCompact()
     {
-        time = Ui.Text(string.Empty, 14, FontWeights.SemiBold);
+        time = Ui.Text(string.Empty, 13, FontWeights.SemiBold);
+        time.HorizontalAlignment = HorizontalAlignment.Left;
 
-        var dot = new Ellipse { Width = 7, Height = 7, VerticalAlignment = VerticalAlignment.Center };
+        var dot = new Ellipse { Width = 6, Height = 6, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right };
         dot.SetResourceReference(Shape.FillProperty, "Island.Accent");
-        DockPanel.SetDock(dot, Dock.Right);
 
-        var panel = new DockPanel { Margin = new Thickness(18, 0, 16, 0), LastChildFill = true };
-        panel.Children.Add(dot);
+        var panel = new Grid { Margin = new Thickness(18, 0, 16, 0) };
         panel.Children.Add(time);
+        panel.Children.Add(dot);
 
         Refresh();
         return panel;

@@ -53,6 +53,7 @@ public partial class SettingsWindow : Window
         BehaviorPanel.Children.Clear();
         startupBox = Check(Strings.StartWithWindows, current.StartWithWindows, (s, v) => s.StartWithWindows = v);
         BehaviorPanel.Children.Add(startupBox);
+        BehaviorPanel.Children.Add(Check(Strings.OpenOnHoverSetting, current.OpenOnHover, (s, v) => s.OpenOnHover = v));
         BehaviorPanel.Children.Add(Check(Strings.MicHotkeySetting, current.MicHotkey, (s, v) => s.MicHotkey = v));
         BehaviorPanel.Children.Add(Combo(Strings.Fullscreen, current.Fullscreen, (s, v) => s.Fullscreen = v,
             (FullscreenBehavior.Strip, Strings.FullscreenStrip),

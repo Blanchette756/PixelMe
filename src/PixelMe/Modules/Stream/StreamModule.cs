@@ -26,7 +26,7 @@ public sealed class StreamModule(ModuleServices services) : IslandModule
 
     public override string Glyph => "";
 
-    public override int Priority => 110;
+    public override int Priority => 40;
 
     public override bool HasActivity => recordingSince is not null;
 

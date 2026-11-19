@@ -50,7 +50,7 @@ public sealed class NotificationsModule(ModuleServices services) : IslandModule
 
     public override string Glyph => "";
 
-    public override int Priority => 80;
+    public override int Priority => 30;
 
     public override bool HasActivity => peeking is not null;
 

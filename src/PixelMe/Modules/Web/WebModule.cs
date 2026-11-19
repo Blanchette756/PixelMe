@@ -17,7 +17,7 @@ public sealed class WebModule(ModuleServices services) : IslandModule
 
     public override string Glyph => "";
 
-    public override int Priority => 100;
+    public override int Priority => 20;
 
     public override Task InitializeAsync(CancellationToken cancellationToken)
     {
@@ -59,7 +59,7 @@ public sealed class WebModule(ModuleServices services) : IslandModule
         var top = Ui.Columns((Ui.Star(), address), (Ui.Auto, go), (Ui.Auto, pin));
         top.Margin = new Thickness(0, 0, 0, 10);
 
-        grid = new UniformGrid { Columns = 4 };
+        grid = new UniformGrid { Columns = 4, VerticalAlignment = VerticalAlignment.Top };
         var root = new DockPanel();
         DockPanel.SetDock(top, Dock.Top);
         root.Children.Add(top);
@@ -89,6 +89,7 @@ public sealed class WebModule(ModuleServices services) : IslandModule
             tile.HorizontalContentAlignment = HorizontalAlignment.Stretch;
             tile.Margin = new Thickness(0, 0, 8, 8);
             tile.Padding = new Thickness(8);
+            tile.Height = 50;
             tile.ToolTip = site;
             tile.ContextMenu = new ContextMenu();
             var remove = new MenuItem { Header = Strings.Unpin };

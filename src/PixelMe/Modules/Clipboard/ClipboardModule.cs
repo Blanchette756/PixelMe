@@ -62,7 +62,7 @@ public sealed class ClipboardModule(ModuleServices services) : IslandModule
 
     public override string Glyph => "";
 
-    public override int Priority => 20;
+    public override int Priority => 60;
 
     public override Task InitializeAsync(CancellationToken cancellationToken)
     {
@@ -149,7 +149,7 @@ public sealed class ClipboardModule(ModuleServices services) : IslandModule
     {
         ClipKind.Files => item.Files.Count == 1 ? Path.GetFileName(item.Files[0]) : $"{Path.GetFileName(item.Files[0])} +{item.Files.Count - 1}",
         ClipKind.Image => Strings.Image,
-        _ => item.Text.ReplaceLineEndings(" ").Trim(),
+        _ => string.Join(' ', item.Text.Split((char[]?)null, 40, StringSplitOptions.RemoveEmptyEntries)),
     };
 
     private static UIElement Thumbnail(ClipItem item)

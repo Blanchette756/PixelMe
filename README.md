@@ -11,7 +11,7 @@
 
 ---
 
-PixelMe adds a small, animated island to the top of your screen. Hover it and it opens into a card with your music, clipboard, files, reminders, widgets and more. It is built to stay light: when nothing is happening it uses **0% CPU**.
+PixelMe adds a small, animated island to the top of your screen. Click it and it opens into a card with your music, clipboard, files, reminders, widgets and more (prefer hover? turn it on in Settings). It is built to stay light: when nothing is happening it uses **0% CPU**.
 
 ## Features
 

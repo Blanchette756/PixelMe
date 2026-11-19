@@ -10,6 +10,7 @@
         <SolidColorBrush x:Key="Island.Secondary" Color="#A0FFFFFF" />
         <SolidColorBrush x:Key="Island.Subtle" Color="#1AFFFFFF" />
         <SolidColorBrush x:Key="Island.Accent" Color="#34D399" />
+        <SolidColorBrush x:Key="Island.Surface" Color="#0A0A0B" />
 
         <Style x:Key="Island.IconButton" TargetType="Button">
             <Setter Property="Width" Value="32" />
@@ -44,15 +45,44 @@
 
         <Style x:Key="Island.MediaButton" TargetType="Button" BasedOn="{StaticResource Island.IconButton}">
             <Setter Property="Foreground" Value="{DynamicResource Island.Foreground}" />
-            <Setter Property="Width" Value="46" />
-            <Setter Property="Height" Value="46" />
+            <Setter Property="Width" Value="44" />
+            <Setter Property="Height" Value="44" />
             <Setter Property="FontSize" Value="20" />
         </Style>
 
-        <Style x:Key="Island.TabButton" TargetType="RadioButton">
-            <Setter Property="Width" Value="38" />
+        <Style x:Key="Island.PaletteButton" TargetType="Button">
+            <Setter Property="Width" Value="34" />
             <Setter Property="Height" Value="34" />
-            <Setter Property="Margin" Value="2,0" />
+            <Setter Property="Foreground" Value="{DynamicResource Island.Secondary}" />
+            <Setter Property="FontFamily" Value="{StaticResource Island.IconFont}" />
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Chrome"
+                                Background="Transparent"
+                                BorderBrush="{DynamicResource Island.Subtle}"
+                                BorderThickness="1.5"
+                                CornerRadius="11">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Island.Subtle}" />
+                                <Setter Property="Foreground" Value="{DynamicResource Island.Foreground}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="Island.TabButton" TargetType="RadioButton">
+            <Setter Property="Width" Value="34" />
+            <Setter Property="Height" Value="38" />
+            <Setter Property="Margin" Value="1,0" />
             <Setter Property="Foreground" Value="{DynamicResource Island.Secondary}" />
             <Setter Property="FontFamily" Value="{StaticResource Island.IconFont}" />
             <Setter Property="FontSize" Value="17" />
@@ -64,13 +94,14 @@
                         <Grid Background="Transparent">
                             <Border x:Name="Chrome" CornerRadius="10" Background="Transparent" Margin="2,0,2,4" />
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,4" />
-                            <Ellipse x:Name="Dot"
-                                     Width="4"
-                                     Height="4"
-                                     HorizontalAlignment="Center"
-                                     VerticalAlignment="Bottom"
-                                     Fill="{DynamicResource Island.Foreground}"
-                                     Visibility="Hidden" />
+                            <Rectangle x:Name="Dot"
+                                       Width="4"
+                                       Height="4"
+                                       Margin="0,0,0,1"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Bottom"
+                                       Fill="{DynamicResource Island.Foreground}"
+                                       Visibility="Hidden" />
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -92,7 +123,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="RepeatButton">
                         <Grid Background="Transparent">
-                            <Border Height="4" CornerRadius="2" Background="{DynamicResource Island.Foreground}" />
+                            <Border Height="5" CornerRadius="2.5" Background="{DynamicResource Island.Foreground}" />
                         </Grid>
                     </ControlTemplate>
                 </Setter.Value>
@@ -135,7 +166,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Slider">
                         <Grid Height="18" Background="Transparent">
-                            <Border Height="4" CornerRadius="2" VerticalAlignment="Center" Background="{DynamicResource Island.Subtle}" />
+                            <Border Height="5" CornerRadius="2.5" VerticalAlignment="Center" Background="{DynamicResource Island.Subtle}" />
                             <Track x:Name="PART_Track" VerticalAlignment="Center">
                                 <Track.DecreaseRepeatButton>
                                     <RepeatButton Command="Slider.DecreaseLarge" Style="{StaticResource Island.SliderFill}" />
@@ -144,10 +175,15 @@
                                     <RepeatButton Command="Slider.IncreaseLarge" Style="{StaticResource Island.SliderEmpty}" />
                                 </Track.IncreaseRepeatButton>
                                 <Track.Thumb>
-                                    <Thumb Style="{StaticResource Island.SliderThumb}" />
+                                    <Thumb x:Name="Knob" Opacity="0" Style="{StaticResource Island.SliderThumb}" />
                                 </Track.Thumb>
                             </Track>
                         </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Knob" Property="Opacity" Value="1" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
