@@ -23,9 +23,15 @@ public sealed class ThemePalette
 
     public bool UsesBackdrop { get; init; }
 
+    public uint BackdropTint { get; init; }
+
     public static ThemePalette For(IslandThemeKind kind)
     {
         var transparency = TransparencyEnabled();
+        var wallpaper = WallpaperColors.Current();
+        var vivid = new SolidColorBrush(wallpaper.Vivid);
+        vivid.Freeze();
+
         return kind switch
         {
             IslandThemeKind.Black => new ThemePalette
@@ -40,35 +46,51 @@ public sealed class ThemePalette
             },
             IslandThemeKind.Graphite => new ThemePalette
             {
-                Background = Vertical(0xFA2E3036, 0xFA1C1D21),
-                Border = Vertical(0x33FFFFFF, 0x14FFFFFF),
+                Background = transparency ? Vertical(0x14FFFFFF, 0x00FFFFFF) : Vertical(0xFA2E3036, 0xFA1C1D21),
+                Border = Vertical(0x59FFFFFF, 0x0FFFFFFF),
                 Foreground = Solid(0xFFF4F4F6),
-                Secondary = Solid(0x99F4F4F6),
-                Subtle = Solid(0x1FFFFFFF),
-                Accent = Solid(0xFF60A5FA),
-                Surface = Solid(0xFF25262B),
+                Secondary = Solid(0xB3F4F4F6),
+                Subtle = Solid(0x26FFFFFF),
+                Accent = vivid,
+                Surface = Solid(0xFF2A2B30),
+                UsesBackdrop = transparency,
+                BackdropTint = 0xB8222327,
             },
             IslandThemeKind.Light => new ThemePalette
             {
-                Background = transparency ? Vertical(0xB8FFFFFF, 0xCCEEF0F4) : Vertical(0xFAFCFCFD, 0xFAECEDF1),
-                Border = Vertical(0x66FFFFFF, 0x29000000),
+                Background = transparency ? Vertical(0x59FFFFFF, 0x14FFFFFF) : Vertical(0xFAFCFCFD, 0xFAECEDF1),
+                Border = Vertical(0x99FFFFFF, 0x26000000),
                 Foreground = Solid(0xFF111216),
                 Secondary = Solid(0x99111216),
                 Subtle = Solid(0x14000000),
                 Accent = Solid(0xFF059669),
                 Surface = Solid(0xFFF2F3F6),
                 UsesBackdrop = transparency,
+                BackdropTint = 0xA6F2F3F5,
+            },
+            IslandThemeKind.Wallpaper => new ThemePalette
+            {
+                Background = transparency ? Vertical(0x1AFFFFFF, 0x00FFFFFF) : Solid(Pack(0xFF, WallpaperColors.Darken(wallpaper.Average, 0.55))),
+                Border = Vertical(0x66FFFFFF, 0x14FFFFFF),
+                Foreground = Solid(0xFFFFFFFF),
+                Secondary = Solid(0xC0FFFFFF),
+                Subtle = Solid(0x2EFFFFFF),
+                Accent = vivid,
+                Surface = Solid(Pack(0xFF, WallpaperColors.Darken(wallpaper.Average, 0.5))),
+                UsesBackdrop = transparency,
+                BackdropTint = Pack(0xB0, WallpaperColors.Darken(wallpaper.Average, 0.45)),
             },
             _ => new ThemePalette
             {
-                Background = transparency ? Vertical(0xB31E2029, 0xD10A0B10) : Vertical(0xF22C2E38, 0xEB0E0F14),
-                Border = Vertical(0x80FFFFFF, 0x1AFFFFFF),
+                Background = transparency ? Vertical(0x24FFFFFF, 0x05FFFFFF) : Vertical(0xF22C2E38, 0xEB0E0F14),
+                Border = Vertical(0x99FFFFFF, 0x14FFFFFF),
                 Foreground = Solid(0xFFFFFFFF),
-                Secondary = Solid(0xB3FFFFFF),
-                Subtle = Solid(0x26FFFFFF),
-                Accent = Solid(0xFF34D399),
-                Surface = Solid(0xFF15161C),
+                Secondary = Solid(0xCCFFFFFF),
+                Subtle = Solid(0x2EFFFFFF),
+                Accent = vivid,
+                Surface = Solid(0xFF1C1D24),
                 UsesBackdrop = transparency,
+                BackdropTint = 0x66101016,
             },
         };
     }
@@ -80,7 +102,11 @@ public sealed class ThemePalette
         resources["Island.Subtle"] = Subtle;
         resources["Island.Accent"] = Accent;
         resources["Island.Surface"] = Surface;
+        resources["Island.Background"] = Background;
+        resources["Island.Border"] = Border;
     }
+
+    private static uint Pack(byte alpha, Color color) => ((uint)alpha << 24) | ((uint)color.R << 16) | ((uint)color.G << 8) | color.B;
 
     private static bool TransparencyEnabled()
     {

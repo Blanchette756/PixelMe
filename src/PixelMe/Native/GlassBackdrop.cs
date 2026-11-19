@@ -46,9 +46,14 @@ internal sealed class GlassBackdrop : IDisposable
 
     public bool IsEnabled => enabled;
 
-    public void SetEnabled(bool value)
+    public void SetEnabled(bool value, uint tint = 0)
     {
         enabled = value;
+        if (value && tint != 0 && !NativeMethods.EnableAcrylic(Handle, tint))
+        {
+            NativeMethods.EnableBlurBehind(Handle);
+        }
+
         ApplyVisibility();
     }
 

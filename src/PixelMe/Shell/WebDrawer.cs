@@ -93,7 +93,7 @@ internal sealed class WebDrawerWindow : Window
         buttons.Children.Add(HeaderButton("", Strings.Reload, () => view.CoreWebView2?.Reload()));
         buttons.Children.Add(HeaderButton("", Strings.OpenInBrowser, () => { if (view.Source is not null) ShellLauncher.Open(view.Source.ToString()); }));
         buttons.Children.Add(HeaderButton("", Strings.Close, Close));
-        DockPanel.SetDock(buttons, Dock.Right);
+        DockPanel.SetDock(buttons, System.Windows.Controls.Dock.Right);
         header.Children.Add(buttons);
         header.Children.Add(title);
 
@@ -102,7 +102,7 @@ internal sealed class WebDrawerWindow : Window
         body.Children.Add(failure);
 
         var root = new DockPanel();
-        DockPanel.SetDock(header, Dock.Top);
+        DockPanel.SetDock(header, System.Windows.Controls.Dock.Top);
         root.Children.Add(header);
         root.Children.Add(body);
         Content = root;

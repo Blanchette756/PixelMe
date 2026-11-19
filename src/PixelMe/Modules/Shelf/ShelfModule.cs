@@ -20,8 +20,6 @@ public sealed class ShelfData
 
 public sealed class ShelfModule : IslandModule, IFileDropTarget
 {
-    private static readonly Dictionary<string, ImageSource?> IconCache = new(StringComparer.OrdinalIgnoreCase);
-
     private readonly PhoneShare share = new();
     private readonly DispatcherTimer shareTimeout = new() { Interval = TimeSpan.FromMinutes(10) };
     private ShelfData data = new();
@@ -133,35 +131,7 @@ public sealed class ShelfModule : IslandModule, IFileDropTarget
         }
     }
 
-    private static ImageSource? IconFor(string path)
-    {
-        var extension = Directory.Exists(path) ? "<folder>" : Path.GetExtension(path);
-        var key = extension is ".exe" or ".lnk" or ".ico" or "" ? path : extension;
-        if (IconCache.TryGetValue(key, out var cached))
-        {
-            return cached;
-        }
-
-        ImageSource? image = null;
-        var info = new NativeMethods.SHFILEINFO();
-        var result = NativeMethods.SHGetFileInfo(path, 0, ref info, (uint)Marshal.SizeOf<NativeMethods.SHFILEINFO>(), NativeMethods.SHGFI_ICON | NativeMethods.SHGFI_LARGEICON);
-        if (result != IntPtr.Zero && info.hIcon != IntPtr.Zero)
-        {
-            try
-            {
-                var source = Imaging.CreateBitmapSourceFromHIcon(info.hIcon, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
-                source.Freeze();
-                image = source;
-            }
-            finally
-            {
-                NativeMethods.DestroyIcon(info.hIcon);
-            }
-        }
-
-        IconCache[key] = image;
-        return image;
-    }
+    private static ImageSource? IconFor(string path) => ShellIcons.ForPath(path);
 
     private UIElement BuildTile(string path)
     {

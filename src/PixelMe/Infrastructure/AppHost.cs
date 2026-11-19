@@ -28,6 +28,12 @@ public sealed class AppHost : IDisposable
             return false;
         }
 
+        if (args.Contains(Shell.Dock.TaskbarSwitch.RestoreArgument, StringComparer.OrdinalIgnoreCase))
+        {
+            Shell.Dock.TaskbarSwitch.Restore();
+            return false;
+        }
+
         startupClock.Start();
         instance = new SingleInstance();
         if (!instance.IsPrimary)
@@ -77,6 +83,13 @@ public sealed class AppHost : IDisposable
     private static void OnDomainUnhandledException(object sender, UnhandledExceptionEventArgs e)
     {
         Log.Error("Fatal exception", e.ExceptionObject as Exception);
+        try
+        {
+            Shell.Dock.TaskbarSwitch.RestoreIfLeftHidden();
+        }
+        catch
+        {
+        }
     }
 
     private static void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)

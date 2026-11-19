@@ -18,7 +18,10 @@ PixelMe adds a small, animated island to the top of your screen. Click it and it
 | | Feature | Notes |
 |---|---|---|
 | ✅ | Animated island, notch or floating style | Spring animations, real background blur on the Glass theme |
-| ✅ | Themes: Glass, Black, Graphite, Light | |
+| ✅ | Themes: Black, Glass, Graphite, Light, Wallpaper | Real acrylic blur; Wallpaper theme takes its colours from your wallpaper |
+| ✅ | Volume and charging pop-ups | The island shows a volume bar when you use the volume keys |
+| ✅ | Dock (taskbar replacement) | Optional. Pinned and open apps, Start, quick settings, clock. The Windows taskbar comes back automatically |
+| ✅ | Update check | Tells you when a new version is on GitHub |
 | ✅ | Music from any app | Album art, colours from the cover, wavy progress bar, seek, volume |
 | ✅ | Synced lyrics | Optional, uses [lrclib.net](https://lrclib.net) |
 | ✅ | Clipboard history | Text, links, images and files, with pinning |
@@ -34,9 +37,11 @@ PixelMe adds a small, animated island to the top of your screen. Click it and it
 | ✅ | Web drawer | Pinned websites in a drawer under the island |
 | ✅ | Stream tools | Twitch / YouTube live chat drawer, OBS recording indicator |
 | ✅ | Installer | Per-user, no admin rights needed |
-| 🚧 | Taskbar replacement | Planned |
 | 🚧 | FPS and temperatures in the game strip | Need extra drivers or admin rights |
 | 🚧 | Pin widgets to the desktop | Planned |
+| 🚧 | Tray icons in the dock | Planned |
+
+If the Windows taskbar ever stays hidden after using the dock, run `PixelMe.exe --restore-taskbar` or simply start PixelMe again with the dock turned off.
 
 ## Install
 
@@ -60,6 +65,15 @@ PixelMe.exe --agent "My Agent" --state waiting --message "Needs approval" --proj
 ```
 
 `--state` can be `waiting`, `working` or `done`.
+
+## Releasing a new version
+
+Push a version tag and GitHub Actions builds the installer and a portable zip, then publishes the release with the notes from `RELEASE_NOTES.md`:
+
+```
+git tag v1.0.0
+git push origin v1.0.0
+```
 
 ## Building from source
 

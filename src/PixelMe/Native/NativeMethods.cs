@@ -248,9 +248,136 @@ internal static class NativeMethods
         return TryGetMonitorBounds(monitor, out bounds);
     }
 
-    public static bool EnableBlurBehind(IntPtr hwnd)
+    public const int ACCENT_ENABLE_ACRYLICBLURBEHIND = 4;
+    public const uint SPI_GETDESKWALLPAPER = 0x0073;
+    public const int WM_SETTINGCHANGE = 0x001A;
+    public const int WM_DWMCOLORIZATIONCOLORCHANGED = 0x0320;
+    public const int SPI_SETDESKWALLPAPER = 0x0014;
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool SystemParametersInfo(uint uiAction, uint uiParam, StringBuilder pvParam, uint fWinIni);
+
+    public const uint ABM_QUERYPOS = 2;
+    public const uint ABM_SETPOS = 3;
+    public const uint ABM_GETSTATE = 4;
+    public const uint ABM_SETSTATE = 10;
+    public const uint ABE_BOTTOM = 3;
+    public const int ABN_POSCHANGED = 1;
+    public const int ABS_AUTOHIDE = 1;
+    public const int ABS_ALWAYSONTOP = 2;
+    public const uint GW_OWNER = 4;
+    public const int SW_MINIMIZE = 6;
+    public const int SW_RESTORE = 9;
+    public const int SW_SHOWNA = 8;
+    public const uint WM_CLOSE = 0x0010;
+    public const uint WM_GETICON = 0x007F;
+    public const uint EVENT_OBJECT_SHOW = 0x8002;
+    public const int DWMWA_CLOAKED = 14;
+
+    public delegate bool EnumWindowsProc(IntPtr hwnd, IntPtr lParam);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    public static extern IntPtr FindWindowEx(IntPtr parent, IntPtr childAfter, string? className, string? windowName);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool EnumWindows(EnumWindowsProc callback, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool IsWindowVisible(IntPtr hwnd);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool IsIconic(IntPtr hwnd);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool IsZoomed(IntPtr hwnd);
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr GetWindow(IntPtr hwnd, uint cmd);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    public static extern int GetWindowTextLength(IntPtr hwnd);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    public static extern int GetWindowText(IntPtr hwnd, StringBuilder text, int max);
+
+    [DllImport("user32.dll")]
+    public static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint processId);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern IntPtr OpenProcess(uint access, [MarshalAs(UnmanagedType.Bool)] bool inherit, uint processId);
+
+    [DllImport("kernel32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool CloseHandle(IntPtr handle);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool QueryFullProcessImageName(IntPtr process, uint flags, StringBuilder path, ref uint size);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    public static extern IntPtr SendMessageTimeout(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam, uint flags, uint timeout, out IntPtr result);
+
+    [DllImport("user32.dll", EntryPoint = "GetClassLongPtrW")]
+    public static extern IntPtr GetClassLongPtr(IntPtr hwnd, int index);
+
+    [DllImport("dwmapi.dll")]
+    public static extern int DwmGetWindowAttribute(IntPtr hwnd, int attribute, out int value, int size);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool RegisterShellHookWindow(IntPtr hwnd);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool DeregisterShellHookWindow(IntPtr hwnd);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool PostMessage(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    public static extern void keybd_event(byte key, byte scan, uint flags, IntPtr extra);
+
+    public static void PressKeys(params byte[] keys)
     {
-        var accent = new ACCENT_POLICY { AccentState = ACCENT_ENABLE_BLURBEHIND };
+        foreach (var key in keys)
+        {
+            keybd_event(key, 0, 0, IntPtr.Zero);
+        }
+
+        foreach (var key in keys.Reverse())
+        {
+            keybd_event(key, 0, 2, IntPtr.Zero);
+        }
+    }
+
+    public static string? WallpaperPath()
+    {
+        var buffer = new StringBuilder(520);
+        return SystemParametersInfo(SPI_GETDESKWALLPAPER, (uint)buffer.Capacity, buffer, 0) && buffer.Length > 0 ? buffer.ToString() : null;
+    }
+
+    public static bool EnableAcrylic(IntPtr hwnd, uint argb)
+    {
+        var abgr = (argb & 0xFF000000) | ((argb & 0x000000FF) << 16) | (argb & 0x0000FF00) | ((argb & 0x00FF0000) >> 16);
+        if ((abgr >> 24) == 0)
+        {
+            abgr |= 0x01000000;
+        }
+
+        return SetAccent(hwnd, ACCENT_ENABLE_ACRYLICBLURBEHIND, abgr);
+    }
+
+    public static bool EnableBlurBehind(IntPtr hwnd) => SetAccent(hwnd, ACCENT_ENABLE_BLURBEHIND, 0);
+
+    private static bool SetAccent(IntPtr hwnd, int state, uint gradient)
+    {
+        var accent = new ACCENT_POLICY { AccentState = state, GradientColor = gradient };
         var size = Marshal.SizeOf<ACCENT_POLICY>();
         var pointer = Marshal.AllocHGlobal(size);
         try

@@ -45,7 +45,8 @@ public partial class SettingsWindow : Window
             (IslandThemeKind.Glass, Strings.ThemeGlass),
             (IslandThemeKind.Black, Strings.ThemeBlack),
             (IslandThemeKind.Graphite, Strings.ThemeGraphite),
-            (IslandThemeKind.Light, Strings.ThemeLight)));
+            (IslandThemeKind.Light, Strings.ThemeLight),
+            (IslandThemeKind.Wallpaper, Strings.ThemeWallpaper)));
         AppearancePanel.Children.Add(Combo(Strings.Style, current.Style, (s, v) => s.Style = v,
             (IslandStyle.Notch, Strings.StyleNotch),
             (IslandStyle.Floating, Strings.StyleFloating)));
@@ -54,6 +55,9 @@ public partial class SettingsWindow : Window
         startupBox = Check(Strings.StartWithWindows, current.StartWithWindows, (s, v) => s.StartWithWindows = v);
         BehaviorPanel.Children.Add(startupBox);
         BehaviorPanel.Children.Add(Check(Strings.OpenOnHoverSetting, current.OpenOnHover, (s, v) => s.OpenOnHover = v));
+        BehaviorPanel.Children.Add(Check(Strings.DockSetting, current.DockEnabled, (s, v) => s.DockEnabled = v));
+        BehaviorPanel.Children.Add(new TextBlock { Text = Strings.DockNote, Opacity = 0.7, FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(28, -2, 0, 6) });
+        BehaviorPanel.Children.Add(Check(Strings.UpdatesSetting, current.CheckForUpdates, (s, v) => s.CheckForUpdates = v));
         BehaviorPanel.Children.Add(Check(Strings.MicHotkeySetting, current.MicHotkey, (s, v) => s.MicHotkey = v));
         BehaviorPanel.Children.Add(Combo(Strings.Fullscreen, current.Fullscreen, (s, v) => s.Fullscreen = v,
             (FullscreenBehavior.Strip, Strings.FullscreenStrip),

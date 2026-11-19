@@ -39,6 +39,8 @@ public static class Strings
 
     public static string ThemeLight => T("Light", "Terang");
 
+    public static string ThemeWallpaper => T("Wallpaper (matches your wallpaper)", "Wallpaper (ikut warna wallpaper)");
+
     public static string Style => T("Island style", "Gaya island");
 
     public static string StyleFloating => T("Floating island", "Island melayang");
@@ -300,6 +302,28 @@ public static class Strings
     public static string FullscreenStay => T("Keep the island", "Tetap tampilkan island");
 
     public static string OpenOnHoverSetting => T("Open the island when the mouse hovers it (instead of clicking)", "Buka island saat mouse diarahkan (bukan diklik)");
+
+    public static string DockSetting => T("Replace the Windows taskbar with the PixelMe dock", "Ganti taskbar Windows dengan dock PixelMe");
+
+    public static string DockNote => T(
+        "The Windows taskbar comes back automatically when you turn this off or close PixelMe. Tray icons are not shown in the dock.",
+        "Taskbar Windows kembali otomatis saat ini dimatikan atau PixelMe ditutup. Ikon tray tidak tampil di dock.");
+
+    public static string UpdatesSetting => T("Check GitHub for new versions", "Cek versi baru di GitHub");
+
+    public static string UpdateAvailable => T("PixelMe {0} is available. Click to download.", "PixelMe {0} sudah tersedia. Klik untuk mengunduh.");
+
+    public static string StartMenu => T("Start", "Start");
+
+    public static string QuickSettingsTip => T("Quick settings", "Pengaturan cepat");
+
+    public static string NotificationCenterTip => T("Notifications and calendar", "Notifikasi dan kalender");
+
+    public static string ShowDesktop => T("Show desktop", "Tampilkan desktop");
+
+    public static string NewWindow => T("Open new window", "Buka jendela baru");
+
+    public static string CloseWindow => T("Close window", "Tutup jendela");
 
     public static string ChangeTheme => T("Change theme", "Ganti tema");
 

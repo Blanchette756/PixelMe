@@ -6,6 +6,7 @@ public enum IslandThemeKind
     Black,
     Graphite,
     Light,
+    Wallpaper,
 }
 
 public enum IslandStyle
@@ -33,6 +34,10 @@ public sealed class AppSettings
     public IslandThemeKind Theme { get; set; } = IslandThemeKind.Black;
 
     public bool OpenOnHover { get; set; }
+
+    public bool DockEnabled { get; set; }
+
+    public bool CheckForUpdates { get; set; } = true;
 
     public IslandStyle Style { get; set; } = IslandStyle.Notch;
 

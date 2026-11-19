@@ -156,7 +156,19 @@ internal sealed class FullscreenWatcher : IDisposable
             return false;
         }
 
-        if (ShellClasses.Contains(NativeMethods.ReadClassName(foreground)))
+        if (ShellClasses.Contains(NativeMethods.ReadClassName(foreground)) || NativeMethods.IsZoomed(foreground))
+        {
+            return false;
+        }
+
+        var className = NativeMethods.ReadClassName(foreground);
+        if (className.StartsWith("HwndWrapper[PixelMe", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        NativeMethods.GetWindowThreadProcessId(foreground, out var owner);
+        if (owner == (uint)Environment.ProcessId)
         {
             return false;
         }

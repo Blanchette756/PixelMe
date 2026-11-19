@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -146,9 +147,11 @@ public partial class IslandWindow : Window
         palette.ApplyTo(Application.Current.Resources);
         Outline.Fill = palette.Background;
         Outline.Stroke = palette.Border;
-        backdrop?.SetEnabled(palette.UsesBackdrop);
+        backdrop?.SetEnabled(palette.UsesBackdrop, palette.BackdropTint);
         SyncBackdrop();
     }
+
+    public event Action? AppearanceChanged;
 
     public void ApplyStyle(IslandStyle next, bool animate)
     {
@@ -733,6 +736,11 @@ public partial class IslandWindow : Window
         if (msg == NativeMethods.WM_DISPLAYCHANGE)
         {
             Dispatcher.InvokeAsync(Reposition, DispatcherPriority.Background);
+        }
+        else if (msg == NativeMethods.WM_DWMCOLORIZATIONCOLORCHANGED
+            || (msg == NativeMethods.WM_SETTINGCHANGE && (wParam.ToInt64() == NativeMethods.SPI_SETDESKWALLPAPER || Marshal.PtrToStringUni(lParam) == "ImmersiveColorSet")))
+        {
+            Dispatcher.InvokeAsync(() => AppearanceChanged?.Invoke(), DispatcherPriority.Background);
         }
 
         return IntPtr.Zero;

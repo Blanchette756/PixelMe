@@ -6,6 +6,7 @@ using PixelMe.Localization;
 using PixelMe.Modules;
 using PixelMe.Native;
 using PixelMe.Settings;
+using PixelMe.Shell.Dock;
 using PixelMe.Theming;
 
 namespace PixelMe.Shell;
@@ -19,6 +20,7 @@ public sealed class SystemIntegration : IDisposable
     private readonly DispatcherTimer stripTimer = new(DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(1) };
     private FullscreenWatcher? fullscreen;
     private SettingsWindow? settingsWindow;
+    private DockWindow? dock;
     private bool fullscreenActive;
 
     public SystemIntegration(AppHost host, IslandWindow island, ModuleServices services)
@@ -31,6 +33,13 @@ public sealed class SystemIntegration : IDisposable
         tray.AutostartToggled += enabled => host.Settings.Update(s => s.StartWithWindows = enabled);
         tray.ExitRequested += () => Application.Current.Dispatcher.InvokeAsync(Application.Current.Shutdown);
         island.SettingsRequested += OpenSettings;
+        island.AppearanceChanged += () =>
+        {
+            WallpaperColors.Invalidate();
+            var palette = ThemePalette.For(host.Settings.Current.Theme);
+            island.ApplyPalette(palette);
+            dock?.ApplyPalette(palette);
+        };
         host.ActivationRequested += OpenSettings;
         host.Settings.Changed += OnSettingsChanged;
         stripTimer.Tick += (_, _) => UpdateStrip();
@@ -41,6 +50,14 @@ public sealed class SystemIntegration : IDisposable
         var current = host.Settings.Current;
         Autostart.Apply(current.StartWithWindows);
         tray.Show(current);
+
+        if (!current.DockEnabled)
+        {
+            TaskbarSwitch.RestoreIfLeftHidden();
+        }
+
+        ApplyDock(current.DockEnabled);
+        ScheduleUpdateCheck();
 
         try
         {
@@ -60,6 +77,7 @@ public sealed class SystemIntegration : IDisposable
 
     public void Dispose()
     {
+        ApplyDock(false);
         stripTimer.Stop();
         host.Settings.Changed -= OnSettingsChanged;
         host.ActivationRequested -= OpenSettings;
@@ -68,8 +86,54 @@ public sealed class SystemIntegration : IDisposable
         tray.Dispose();
     }
 
+    private void ApplyDock(bool enabled)
+    {
+        if (enabled && dock is null)
+        {
+            try
+            {
+                dock = new DockWindow();
+                dock.Open(ThemePalette.For(host.Settings.Current.Theme));
+            }
+            catch (Exception ex)
+            {
+                Log.Error("The dock could not start", ex);
+                dock?.Close();
+                dock = null;
+                TaskbarSwitch.Restore();
+            }
+        }
+        else if (!enabled && dock is not null)
+        {
+            dock.Close();
+            dock = null;
+            TaskbarSwitch.Restore();
+        }
+    }
+
+    private void ScheduleUpdateCheck()
+    {
+        if (!host.Settings.Current.CheckForUpdates)
+        {
+            return;
+        }
+
+        var delay = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
+        delay.Tick += async (_, _) =>
+        {
+            delay.Stop();
+            var release = await UpdateChecker.FindNewerAsync();
+            if (release is not null)
+            {
+                tray.ShowUpdate(release);
+            }
+        };
+        delay.Start();
+    }
+
     private void UpdatePresence()
     {
+        dock?.SetFullscreen(fullscreenActive && host.Settings.Current.Fullscreen != FullscreenBehavior.Stay);
         var mode = host.Settings.Current.Fullscreen;
         var presence = !fullscreenActive || mode == FullscreenBehavior.Stay
             ? IslandPresence.Normal
@@ -99,7 +163,14 @@ public sealed class SystemIntegration : IDisposable
     {
         if (previous.Theme != current.Theme)
         {
-            island.ApplyPalette(ThemePalette.For(current.Theme));
+            var palette = ThemePalette.For(current.Theme);
+            island.ApplyPalette(palette);
+            dock?.ApplyPalette(palette);
+        }
+
+        if (previous.DockEnabled != current.DockEnabled)
+        {
+            ApplyDock(current.DockEnabled);
         }
 
         if (previous.Style != current.Style)

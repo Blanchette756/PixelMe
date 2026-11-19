@@ -11,6 +11,8 @@
         <SolidColorBrush x:Key="Island.Subtle" Color="#1AFFFFFF" />
         <SolidColorBrush x:Key="Island.Accent" Color="#34D399" />
         <SolidColorBrush x:Key="Island.Surface" Color="#0A0A0B" />
+        <SolidColorBrush x:Key="Island.Background" Color="#0A0A0B" />
+        <SolidColorBrush x:Key="Island.Border" Color="Transparent" />
 
         <Style x:Key="Island.IconButton" TargetType="Button">
             <Setter Property="Width" Value="32" />

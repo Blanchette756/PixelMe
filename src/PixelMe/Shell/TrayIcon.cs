@@ -63,6 +63,14 @@ public sealed class TrayIcon : IDisposable
         previous?.Dispose();
     }
 
+    public void ShowUpdate(ReleaseInfo release)
+    {
+        icon.BalloonTipTitle = AppInfo.Name;
+        icon.BalloonTipText = string.Format(Strings.UpdateAvailable, release.Version);
+        icon.BalloonTipClicked += (_, _) => ShellLauncher.Open(release.Url);
+        icon.ShowBalloonTip(15000);
+    }
+
     public void SetAutostart(bool enabled)
     {
         if (autostartItem is not null)

@@ -6,6 +6,7 @@ using PixelMe.Localization;
 using PixelMe.Native;
 using PixelMe.Native.Audio;
 using Windows.Devices.Radios;
+using Forms = System.Windows.Forms;
 
 namespace PixelMe.Modules.Controls;
 
@@ -31,6 +32,18 @@ public sealed class ControlsModule : IslandModule
     private Button? wifiTile;
     private Button? bluetoothTile;
     private StackPanel? powerRow;
+    private FrameworkElement? panelRoot;
+    private TextBlock? osdGlyph;
+    private TextBlock? osdText;
+    private Border? osdFill;
+    private Border? osdTrack;
+    private float osdLevel;
+    private bool osdFlag;
+    private float lastLevel;
+    private bool lastMuted;
+    private bool lastPowerOnline;
+    private bool osdReady;
+    private bool osdPower;
     private bool updating;
 
     public override string Id => "controls";
@@ -41,9 +54,42 @@ public sealed class ControlsModule : IslandModule
 
     public override int Priority => 80;
 
+    public override double CompactWidth => 250;
+
+    protected override FrameworkElement BuildCompact()
+    {
+        osdGlyph = Ui.Glyph("", 15);
+        osdFill = new Border { CornerRadius = new CornerRadius(2.5), HorizontalAlignment = HorizontalAlignment.Left };
+        osdFill.SetResourceReference(Border.BackgroundProperty, "Island.Foreground");
+        var track = new Border { Height = 5, CornerRadius = new CornerRadius(2.5), Child = osdFill, Margin = new Thickness(10, 0, 10, 0), Width = 120 };
+        track.SetResourceReference(Border.BackgroundProperty, "Island.Subtle");
+        osdTrack = track;
+        osdText = Ui.Text(string.Empty, 12.5, FontWeights.SemiBold);
+        var row = Ui.Columns((Ui.Auto, osdGlyph), (Ui.Star(), track), (Ui.Auto, osdText));
+        row.Margin = new Thickness(16, 0, 16, 0);
+        RenderOsd();
+        return row;
+    }
+
     public override async Task InitializeAsync(CancellationToken cancellationToken)
     {
-        volume.Changed += (level, muted) => ShowVolume(level, muted);
+        volume.Changed += (level, muted) =>
+        {
+            ShowVolume(level, muted);
+            if (osdReady && (Math.Abs(level - lastLevel) > 0.004 || muted != lastMuted) && !(panelRoot?.IsVisible ?? false))
+            {
+                osdPower = false;
+                RenderOsd(level, muted);
+                RequestAttention();
+            }
+
+            lastLevel = level;
+            lastMuted = muted;
+        };
+        volume.Refresh();
+        lastPowerOnline = Forms.SystemInformation.PowerStatus.PowerLineStatus == Forms.PowerLineStatus.Online;
+        Microsoft.Win32.SystemEvents.PowerModeChanged += OnPowerModeChanged;
+        osdReady = true;
         try
         {
             if (await Radio.RequestAccessAsync() == RadioAccessStatus.Allowed)
@@ -68,7 +114,69 @@ public sealed class ControlsModule : IslandModule
 
     public override void Dispose()
     {
+        Microsoft.Win32.SystemEvents.PowerModeChanged -= OnPowerModeChanged;
         volume.Dispose();
+    }
+
+    private void OnPowerModeChanged(object sender, Microsoft.Win32.PowerModeChangedEventArgs e)
+    {
+        if (e.Mode != Microsoft.Win32.PowerModes.StatusChange)
+        {
+            return;
+        }
+
+        dispatcher.InvokeAsync(() =>
+        {
+            var status = Forms.SystemInformation.PowerStatus;
+            if (status.BatteryChargeStatus.HasFlag(Forms.BatteryChargeStatus.NoSystemBattery))
+            {
+                return;
+            }
+
+            var online = status.PowerLineStatus == Forms.PowerLineStatus.Online;
+            if (online == lastPowerOnline)
+            {
+                return;
+            }
+
+            lastPowerOnline = online;
+            osdPower = true;
+            RenderOsd(status.BatteryLifePercent, !online);
+            RequestAttention();
+        });
+    }
+
+    private void RenderOsd(float level, bool flag)
+    {
+        osdLevel = level;
+        osdFlag = flag;
+        RenderOsd();
+    }
+
+    private void RenderOsd()
+    {
+        var flag = osdFlag;
+        if (osdGlyph is null || osdFill is null || osdText is null || osdTrack is null)
+        {
+            return;
+        }
+
+        var percent = Math.Clamp(osdLevel, 0f, 1f);
+        osdFill.Width = osdTrack.Width * percent;
+        osdText.Text = $"{percent * 100:0}%";
+        if (osdPower)
+        {
+            osdGlyph.Text = flag ? "" : "";
+            osdGlyph.SetResourceReference(TextBlock.ForegroundProperty, flag ? "Island.Foreground" : "Island.Accent");
+            osdFill.SetResourceReference(Border.BackgroundProperty, flag ? "Island.Foreground" : "Island.Accent");
+        }
+        else
+        {
+            osdGlyph.Text = flag || percent <= 0.001 ? "" : "";
+            osdGlyph.SetResourceReference(TextBlock.ForegroundProperty, "Island.Foreground");
+            osdFill.SetResourceReference(Border.BackgroundProperty, "Island.Foreground");
+            osdFill.Opacity = flag ? 0.35 : 1;
+        }
     }
 
     protected override FrameworkElement BuildExpanded()
@@ -93,6 +201,7 @@ public sealed class ControlsModule : IslandModule
 
         var grid = new UniformGridLite(2, wifiTile, bluetoothTile, night, focus);
         var root = Ui.Columns((Ui.Star(), left), (Ui.Px(20), new Grid()), (Ui.Px(250), grid));
+        panelRoot = root;
         root.IsVisibleChanged += async (_, _) =>
         {
             if (root.IsVisible)
