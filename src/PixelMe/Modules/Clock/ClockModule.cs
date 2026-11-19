@@ -8,47 +8,30 @@ using PixelMe.Localization;
 
 namespace PixelMe.Modules.Clock;
 
-public sealed class ClockModule : IIslandModule
+public sealed class ClockModule : IslandModule
 {
     private readonly Dispatcher dispatcher = Dispatcher.CurrentDispatcher;
     private readonly DispatcherTimer timer = new(DispatcherPriority.Background);
-    private TextBlock? compactTime;
-    private TextBlock? expandedTime;
-    private TextBlock? expandedDate;
-    private FrameworkElement? compactView;
-    private FrameworkElement? expandedView;
+    private TextBlock? time;
     private bool started;
 
-    public string Id => "clock";
+    public override string Id => "clock";
 
-    public string DisplayName => Strings.Clock;
+    public override string DisplayName => Strings.Clock;
 
-    public string Glyph => "";
+    public override string Glyph => "";
 
-    public int Priority => 100;
+    public override int Priority => 1000;
 
-    public bool HasActivity => true;
+    public override bool ShowsTab => false;
 
-    public double CompactWidth => 180;
+    public override bool HasActivity => true;
 
-    public FrameworkElement CompactView => compactView ??= BuildCompact();
+    public override int ActivityRank => 1000;
 
-    public event EventHandler? ActivityChanged
-    {
-        add
-        {
-        }
+    public override double CompactWidth => 180;
 
-        remove
-        {
-        }
-    }
-
-    public void RefreshText() => Refresh();
-
-    public FrameworkElement ExpandedView => expandedView ??= BuildExpanded();
-
-    public Task InitializeAsync(CancellationToken cancellationToken)
+    public override Task InitializeAsync(CancellationToken cancellationToken)
     {
         timer.Tick += (_, _) => Refresh();
         SystemEvents.TimeChanged += OnSystemTimeChanged;
@@ -58,7 +41,9 @@ public sealed class ClockModule : IIslandModule
         return Task.CompletedTask;
     }
 
-    public void Dispose()
+    public override void RefreshText() => Refresh();
+
+    public override void Dispose()
     {
         timer.Stop();
         if (started)
@@ -69,17 +54,9 @@ public sealed class ClockModule : IIslandModule
         }
     }
 
-    private static TextBlock CreateText(double size, FontWeight weight, string brushKey)
+    protected override FrameworkElement BuildCompact()
     {
-        var text = new TextBlock { FontSize = size, FontWeight = weight };
-        text.SetResourceReference(TextBlock.ForegroundProperty, brushKey);
-        return text;
-    }
-
-    private FrameworkElement BuildCompact()
-    {
-        compactTime = CreateText(14, FontWeights.SemiBold, "Island.Foreground");
-        compactTime.VerticalAlignment = VerticalAlignment.Center;
+        time = Ui.Text(string.Empty, 14, FontWeights.SemiBold);
 
         var dot = new Ellipse { Width = 7, Height = 7, VerticalAlignment = VerticalAlignment.Center };
         dot.SetResourceReference(Shape.FillProperty, "Island.Accent");
@@ -87,45 +64,20 @@ public sealed class ClockModule : IIslandModule
 
         var panel = new DockPanel { Margin = new Thickness(18, 0, 16, 0), LastChildFill = true };
         panel.Children.Add(dot);
-        panel.Children.Add(compactTime);
+        panel.Children.Add(time);
 
         Refresh();
         return panel;
     }
 
-    private FrameworkElement BuildExpanded()
-    {
-        expandedTime = CreateText(46, FontWeights.Light, "Island.Foreground");
-        expandedDate = CreateText(14, FontWeights.Normal, "Island.Secondary");
-        expandedDate.Margin = new Thickness(2, 0, 0, 0);
-
-        var panel = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-        panel.Children.Add(expandedTime);
-        panel.Children.Add(expandedDate);
-
-        Refresh();
-        return panel;
-    }
+    protected override FrameworkElement BuildExpanded() => new Grid();
 
     private void Refresh()
     {
         var now = DateTime.Now;
-        var regional = CultureInfo.CurrentCulture;
-        var time = now.ToString(regional.DateTimeFormat.ShortTimePattern, regional);
-
-        if (compactTime is not null)
+        if (time is not null)
         {
-            compactTime.Text = time;
-        }
-
-        if (expandedTime is not null)
-        {
-            expandedTime.Text = time;
-        }
-
-        if (expandedDate is not null)
-        {
-            expandedDate.Text = now.ToString("dddd, d MMMM yyyy", Strings.Culture);
+            time.Text = now.ToString(CultureInfo.CurrentCulture.DateTimeFormat.ShortTimePattern, CultureInfo.CurrentCulture);
         }
 
         if (!started)
@@ -133,16 +85,12 @@ public sealed class ClockModule : IIslandModule
             return;
         }
 
-        var untilNextMinute = TimeSpan.FromSeconds(60 - now.Second) - TimeSpan.FromMilliseconds(now.Millisecond);
         timer.Stop();
-        timer.Interval = untilNextMinute + TimeSpan.FromMilliseconds(50);
+        timer.Interval = TimeSpan.FromSeconds(60 - now.Second) - TimeSpan.FromMilliseconds(now.Millisecond) + TimeSpan.FromMilliseconds(50);
         timer.Start();
     }
 
-    private void OnSystemTimeChanged(object? sender, EventArgs e)
-    {
-        dispatcher.InvokeAsync(Refresh);
-    }
+    private void OnSystemTimeChanged(object? sender, EventArgs e) => dispatcher.InvokeAsync(Refresh);
 
     private void OnPowerModeChanged(object sender, PowerModeChangedEventArgs e)
     {

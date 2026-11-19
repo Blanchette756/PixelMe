@@ -4,9 +4,9 @@
         ThemeMode="System"
         Title="PixelMe"
         Icon="/Assets/PixelMe.ico"
-        Width="560"
-        Height="660"
-        MinWidth="460"
+        Width="600"
+        Height="720"
+        MinWidth="480"
         MinHeight="420"
         WindowStartupLocation="CenterScreen">
     <Window.Resources>
@@ -22,11 +22,6 @@
             <Setter Property="CornerRadius" Value="8" />
             <Setter Property="Padding" Value="16,14" />
         </Style>
-        <Style x:Key="RowLabel" TargetType="TextBlock">
-            <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="Margin" Value="0,0,16,0" />
-            <Setter Property="TextWrapping" Value="Wrap" />
-        </Style>
     </Window.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -41,37 +36,22 @@
 
             <TextBlock x:Name="AppearanceHeader" Style="{StaticResource SectionHeader}" />
             <Border Style="{StaticResource Card}">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="200" />
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="12" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <TextBlock x:Name="ThemeLabel" Style="{StaticResource RowLabel}" />
-                    <ComboBox x:Name="ThemeBox" Grid.Column="1" />
-                    <TextBlock x:Name="StyleLabel" Grid.Row="2" Style="{StaticResource RowLabel}" />
-                    <ComboBox x:Name="StyleBox" Grid.Row="2" Grid.Column="1" />
-                </Grid>
+                <StackPanel x:Name="AppearancePanel" />
             </Border>
 
             <TextBlock x:Name="BehaviorHeader" Style="{StaticResource SectionHeader}" />
             <Border Style="{StaticResource Card}">
-                <StackPanel>
-                    <CheckBox x:Name="StartupBox" />
-                    <CheckBox x:Name="FullscreenBox" Margin="0,10,0,0" />
-                    <Grid Margin="0,14,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="200" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock x:Name="LanguageLabel" Style="{StaticResource RowLabel}" />
-                        <ComboBox x:Name="LanguageBox" Grid.Column="1" />
-                    </Grid>
-                </StackPanel>
+                <StackPanel x:Name="BehaviorPanel" />
+            </Border>
+
+            <TextBlock x:Name="FeaturesHeader" Style="{StaticResource SectionHeader}" />
+            <Border Style="{StaticResource Card}">
+                <StackPanel x:Name="FeaturesPanel" />
+            </Border>
+
+            <TextBlock x:Name="StreamHeader" Style="{StaticResource SectionHeader}" />
+            <Border Style="{StaticResource Card}">
+                <StackPanel x:Name="StreamPanel" />
             </Border>
 
             <TextBlock x:Name="AboutHeader" Style="{StaticResource SectionHeader}" />

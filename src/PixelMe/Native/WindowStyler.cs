@@ -23,6 +23,13 @@ internal static class WindowStyler
             NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE | NativeMethods.SWP_NOACTIVATE | NativeMethods.SWP_FRAMECHANGED);
     }
 
+    public static void SetActivatable(IntPtr hwnd, bool activatable)
+    {
+        var style = NativeMethods.GetWindowLongPtr(hwnd, NativeMethods.GWL_EXSTYLE).ToInt64();
+        style = activatable ? style & ~NativeMethods.WS_EX_NOACTIVATE : style | NativeMethods.WS_EX_NOACTIVATE;
+        NativeMethods.SetWindowLongPtr(hwnd, NativeMethods.GWL_EXSTYLE, new IntPtr(style));
+    }
+
     public static void BringToTop(IntPtr hwnd)
     {
         NativeMethods.SetWindowPos(

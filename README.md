@@ -11,67 +11,79 @@
 
 ---
 
-PixelMe adds a small, animated island to the top of your screen. Hover it and it grows into a card with your music, clipboard, files, reminders, widgets and more. It is built to stay light: when nothing is happening it uses **0% CPU**.
+PixelMe adds a small, animated island to the top of your screen. Hover it and it opens into a card with your music, clipboard, files, reminders, widgets and more. It is built to stay light: when nothing is happening it uses **0% CPU**.
 
-## Status
+## Features
 
-PixelMe is in early development. The roadmap below shows what works today.
+| | Feature | Notes |
+|---|---|---|
+| ✅ | Animated island, notch or floating style | Spring animations, real background blur on the Glass theme |
+| ✅ | Themes: Glass, Black, Graphite, Light | |
+| ✅ | Music from any app | Album art, colours from the cover, wavy progress bar, seek, volume |
+| ✅ | Synced lyrics | Optional, uses [lrclib.net](https://lrclib.net) |
+| ✅ | Clipboard history | Text, links, images and files, with pinning |
+| ✅ | File shelf | Drop files on the island, drag them out into any app |
+| ✅ | Send to phone | QR code, same Wi-Fi, works only while the code is on screen |
+| ✅ | Reminders and quick timers | Snooze, done, repeat |
+| ✅ | One-key microphone mute | `Ctrl+Alt+M` in every app, call timer while the mic is in use |
+| ✅ | Quick controls | Volume, brightness, Wi-Fi, Bluetooth, power mode. Night light and Focus open Windows Settings |
+| ✅ | Widgets | Clock, world clock, weather, battery, stopwatch, PC stats, to-do, photos |
+| ✅ | Notifications | Optional; Windows must allow PixelMe to read notifications |
+| ✅ | AI agent monitor | Alerts when Claude Code or Codex needs your input |
+| ✅ | Game strip | CPU, GPU and RAM while a fullscreen app is open |
+| ✅ | Web drawer | Pinned websites in a drawer under the island |
+| ✅ | Stream tools | Twitch / YouTube live chat drawer, OBS recording indicator |
+| ✅ | Installer | Per-user, no admin rights needed |
+| 🚧 | Taskbar replacement | Planned |
+| 🚧 | FPS and temperatures in the game strip | Need extra drivers or admin rights |
+| 🚧 | Pin widgets to the desktop | Planned |
 
-### Roadmap
+## Install
 
-- [x] Animated island (floating or notch style) with spring animations
-- [x] Themes: Glass, Black, Graphite, Light
-- [x] Settings window, tray icon, start with Windows
-- [x] Auto-hide while a fullscreen app is open
-- [x] English and Bahasa Indonesia
-- [ ] Music controls for any app, album art, synced lyrics
-- [ ] Clipboard history (text, links, images, files) with pinning
-- [ ] File shelf (drop files, drag them out again)
-- [ ] Reminders and timers
-- [ ] One-key microphone mute with call timer
-- [ ] Quick controls (volume, brightness, Wi-Fi, Bluetooth, night light, focus, power mode)
-- [ ] Widgets (clock, world clock, weather, to-do, photos, battery, timer, PC stats)
-- [ ] Notifications in the island
-- [ ] AI agent monitor (alerts when a coding agent needs your input)
-- [ ] Game strip (FPS, CPU, GPU, RAM, temperatures)
-- [ ] Twitch / YouTube chat drawer and OBS recording indicator
-- [ ] Web drawer for pinned websites
-- [ ] Send files to your phone with a QR code
-- [ ] Optional taskbar replacement
-- [ ] Installer
+Download `PixelMe-Setup-x.y.z.exe` from [Releases](https://github.com/Blanchette756/PixelMe/releases) and run it.
 
-## Requirements
+Windows SmartScreen may warn you because the installer is not code-signed. Click **More info → Run anyway**.
 
-- Windows 10 version 2004 (build 19041) or newer, or Windows 11
-- 64-bit (x64)
+**Requirements:** Windows 10 version 2004 (build 19041) or newer, or Windows 11, 64-bit.
+
+## AI agent alerts
+
+PixelMe can tell you when a coding agent is waiting for you. Open the island, go to the **AI agents** tab and copy the snippet for your agent.
+
+- **Claude Code:** paste the copied `hooks` block into `~/.claude/settings.json`.
+- **Codex:** paste the copied `notify = [...]` line into `~/.codex/config.toml`.
+
+Any other tool can send a signal too:
+
+```
+PixelMe.exe --agent "My Agent" --state waiting --message "Needs approval" --project my-repo
+```
+
+`--state` can be `waiting`, `working` or `done`.
 
 ## Building from source
 
 1. Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
-2. Clone the repository:
+2. Clone and run:
    ```
    git clone https://github.com/Blanchette756/PixelMe.git
    cd PixelMe
-   ```
-3. Build and run:
-   ```
    dotnet run --project src/PixelMe
    ```
-
-To create a standalone `.exe` that does not need .NET installed:
-
-```
-dotnet publish src/PixelMe -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o publish
-```
+3. Build the installer (needs [Inno Setup 6](https://jrsoftware.org/isinfo.php)):
+   ```
+   powershell -ExecutionPolicy Bypass -File tools/publish.ps1
+   ```
+   The installer is written to `artifacts/`.
 
 ## Where PixelMe keeps its data
 
 | What | Location |
 |---|---|
-| Settings | `%APPDATA%\PixelMe\settings.json` |
-| Logs | `%LOCALAPPDATA%\PixelMe\logs` |
+| Settings, clipboard, shelf, reminders, to-do | `%APPDATA%\PixelMe` |
+| Clipboard images, web drawer data, logs | `%LOCALAPPDATA%\PixelMe` |
 
-Nothing is sent anywhere. Everything stays on your PC.
+Your clipboard, files and notifications never leave your PC. PixelMe only goes online for the features you turn on: weather (open-meteo.com), lyrics (lrclib.net), pinned websites, and live chat.
 
 ## License
 

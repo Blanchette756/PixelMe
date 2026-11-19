@@ -38,6 +38,8 @@ public sealed record MediaState
 
     public double Rate { get; init; } = 1;
 
+    public IReadOnlyList<LyricLine>? Lyrics { get; init; }
+
     public TimeSpan CurrentPosition(DateTimeOffset now)
     {
         var position = Position;

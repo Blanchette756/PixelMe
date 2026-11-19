@@ -3,6 +3,7 @@ using System.Windows.Threading;
 using PixelMe.Infrastructure;
 using PixelMe.Island;
 using PixelMe.Localization;
+using PixelMe.Modules;
 using PixelMe.Native;
 using PixelMe.Settings;
 using PixelMe.Theming;
@@ -13,15 +14,18 @@ public sealed class SystemIntegration : IDisposable
 {
     private readonly AppHost host;
     private readonly IslandWindow island;
+    private readonly ModuleServices services;
     private readonly TrayIcon tray;
+    private readonly DispatcherTimer stripTimer = new(DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(1) };
     private FullscreenWatcher? fullscreen;
     private SettingsWindow? settingsWindow;
     private bool fullscreenActive;
 
-    public SystemIntegration(AppHost host, IslandWindow island)
+    public SystemIntegration(AppHost host, IslandWindow island, ModuleServices services)
     {
         this.host = host;
         this.island = island;
+        this.services = services;
         tray = new TrayIcon();
         tray.SettingsRequested += OpenSettings;
         tray.AutostartToggled += enabled => host.Settings.Update(s => s.StartWithWindows = enabled);
@@ -29,6 +33,7 @@ public sealed class SystemIntegration : IDisposable
         island.SettingsRequested += OpenSettings;
         host.ActivationRequested += OpenSettings;
         host.Settings.Changed += OnSettingsChanged;
+        stripTimer.Tick += (_, _) => UpdateStrip();
     }
 
     public void Start()
@@ -43,7 +48,7 @@ public sealed class SystemIntegration : IDisposable
             fullscreen.Changed += active =>
             {
                 fullscreenActive = active;
-                UpdateIslandVisibility();
+                UpdatePresence();
             };
             fullscreen.Start();
         }
@@ -55,6 +60,7 @@ public sealed class SystemIntegration : IDisposable
 
     public void Dispose()
     {
+        stripTimer.Stop();
         host.Settings.Changed -= OnSettingsChanged;
         host.ActivationRequested -= OpenSettings;
         fullscreen?.Dispose();
@@ -62,9 +68,31 @@ public sealed class SystemIntegration : IDisposable
         tray.Dispose();
     }
 
-    private void UpdateIslandVisibility()
+    private void UpdatePresence()
     {
-        island.SetSuppressed(fullscreenActive && host.Settings.Current.HideInFullscreen);
+        var mode = host.Settings.Current.Fullscreen;
+        var presence = !fullscreenActive || mode == FullscreenBehavior.Stay
+            ? IslandPresence.Normal
+            : mode == FullscreenBehavior.Hide ? IslandPresence.Hidden : IslandPresence.Strip;
+
+        if (presence == IslandPresence.Strip)
+        {
+            UpdateStrip();
+            stripTimer.Start();
+        }
+        else
+        {
+            stripTimer.Stop();
+        }
+
+        island.SetPresence(presence);
+    }
+
+    private void UpdateStrip()
+    {
+        var stats = services.Stats.Sample();
+        var gpu = stats.Gpu is { } value ? $"GPU {value,3:0}%   " : string.Empty;
+        island.SetStripText($"CPU {stats.Cpu,3:0}%   {gpu}RAM {stats.Ram,3:0}%   {DateTime.Now:HH:mm}");
     }
 
     private void OnSettingsChanged(AppSettings previous, AppSettings current)
@@ -85,9 +113,9 @@ public sealed class SystemIntegration : IDisposable
             tray.SetAutostart(current.StartWithWindows);
         }
 
-        if (previous.HideInFullscreen != current.HideInFullscreen)
+        if (previous.Fullscreen != current.Fullscreen)
         {
-            UpdateIslandVisibility();
+            UpdatePresence();
         }
 
         if (previous.Language != current.Language)

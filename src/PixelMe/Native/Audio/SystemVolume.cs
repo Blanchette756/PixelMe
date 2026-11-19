@@ -4,10 +4,12 @@ using PixelMe.Infrastructure;
 
 namespace PixelMe.Native.Audio;
 
-public sealed class SystemVolume : IDisposable
+public sealed class SystemVolume(int flow = SystemVolume.RenderFlow, int role = SystemVolume.ConsoleRole) : IDisposable
 {
-    private const int RenderFlow = 0;
-    private const int ConsoleRole = 0;
+    public const int RenderFlow = 0;
+    public const int CaptureFlow = 1;
+    public const int ConsoleRole = 0;
+    public const int CommunicationsRole = 2;
     private const int AllContexts = 23;
 
     private static readonly Guid OwnContext = Guid.NewGuid();
@@ -26,7 +28,7 @@ public sealed class SystemVolume : IDisposable
         try
         {
             enumerator ??= (IMMDeviceEnumerator)new MMDeviceEnumeratorComObject();
-            Marshal.ThrowExceptionForHR(enumerator.GetDefaultAudioEndpoint(RenderFlow, ConsoleRole, out var device));
+            Marshal.ThrowExceptionForHR(enumerator.GetDefaultAudioEndpoint(flow, role, out var device));
             try
             {
                 var iid = typeof(IAudioEndpointVolume).GUID;
@@ -69,6 +71,22 @@ public sealed class SystemVolume : IDisposable
             endpoint.SetMute(false, ref context);
             Publish();
         }
+    }
+
+    public bool IsAvailable => endpoint is not null;
+
+    public bool? IsMuted => endpoint is not null && endpoint.GetMute(out var muted) == 0 ? muted : null;
+
+    public void SetMuted(bool muted)
+    {
+        if (endpoint is null)
+        {
+            return;
+        }
+
+        var context = OwnContext;
+        endpoint.SetMute(muted, ref context);
+        Publish();
     }
 
     public void ToggleMute()

@@ -1,5 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -14,6 +16,8 @@ namespace PixelMe.Island;
 
 public partial class IslandWindow : Window
 {
+    private static readonly TimeSpan PeekDuration = TimeSpan.FromSeconds(4);
+
     private readonly SettingsStore settings;
     private readonly DispatcherTimer expandTimer;
     private readonly DispatcherTimer collapseTimer;
@@ -24,13 +28,14 @@ public partial class IslandWindow : Window
     private GlassBackdrop? backdrop;
     private FrameLayout layout;
     private IslandStyle style;
+    private IslandPresence presence = IslandPresence.Normal;
     private double compactWidth = IslandMetrics.DefaultCompactWidth;
     private IntPtr handle;
     private int windowX;
     private int windowY;
     private bool expanded;
     private bool interactive;
-    private bool suppressed;
+    private bool keyboard;
 
     public IslandWindow(SettingsStore settings)
     {
@@ -58,7 +63,7 @@ public partial class IslandWindow : Window
         collapseTimer.Tick += (_, _) =>
         {
             collapseTimer.Stop();
-            if (!IslandRoot.IsMouseOver)
+            if (!IslandRoot.IsMouseOver && !(keyboard && IsActive))
             {
                 SetExpanded(false);
             }
@@ -66,6 +71,17 @@ public partial class IslandWindow : Window
 
         animator = new SpringAnimator(TargetValues(), ApplyFrame);
         IsVisibleChanged += (_, _) => backdrop?.SetVisible(IsVisible);
+        Deactivated += (_, _) =>
+        {
+            if (keyboard)
+            {
+                DisableKeyboard();
+                if (!IslandRoot.IsMouseOver)
+                {
+                    Restart(collapseTimer, settings.Current.CollapseDelayMs);
+                }
+            }
+        };
     }
 
     public event Action? SettingsRequested;
@@ -119,6 +135,7 @@ public partial class IslandWindow : Window
         foreach (var module in modules)
         {
             module.ActivityChanged -= OnModuleActivityChanged;
+            module.AttentionRequested -= OnModuleAttention;
         }
 
         TabStrip.Children.Clear();
@@ -127,12 +144,19 @@ public partial class IslandWindow : Window
 
         foreach (var module in ready.OrderBy(m => m.Priority))
         {
-            if (TryBuildView(module, m => m.ExpandedView) is null)
+            if (module.ShowsTab && TryBuildView(module, m => m.ExpandedView) is null)
             {
                 continue;
             }
 
             mounted.Add(module);
+            module.ActivityChanged += OnModuleActivityChanged;
+            module.AttentionRequested += OnModuleAttention;
+            if (!module.ShowsTab)
+            {
+                continue;
+            }
+
             var tab = new RadioButton
             {
                 Style = TryFindResource("Island.TabButton") as System.Windows.Style,
@@ -143,12 +167,11 @@ public partial class IslandWindow : Window
             tab.Checked += (_, _) => Select(module);
             TabStrip.Children.Add(tab);
             tabs[module] = tab;
-            module.ActivityChanged += OnModuleActivityChanged;
         }
 
         modules = mounted;
         RefreshCompact(animate: false);
-        SelectTab(compactModule ?? modules.FirstOrDefault());
+        SelectTab(tabs.Keys.FirstOrDefault());
         RefreshText();
     }
 
@@ -163,7 +186,7 @@ public partial class IslandWindow : Window
         IslandRoot.MouseEnter += (_, _) =>
         {
             collapseTimer.Stop();
-            if (!expanded)
+            if (!expanded && presence == IslandPresence.Normal)
             {
                 Restart(expandTimer, settings.Current.ExpandDelayMs);
             }
@@ -172,28 +195,64 @@ public partial class IslandWindow : Window
         IslandRoot.MouseLeave += (_, _) =>
         {
             expandTimer.Stop();
-            if (expanded)
+            if (expanded && !(keyboard && IsActive))
             {
                 Restart(collapseTimer, settings.Current.CollapseDelayMs);
             }
         };
 
-        IslandRoot.PreviewMouseLeftButtonDown += (_, _) =>
+        IslandRoot.PreviewMouseLeftButtonDown += (_, e) =>
         {
+            if (presence != IslandPresence.Normal)
+            {
+                return;
+            }
+
             if (!expanded)
             {
                 expandTimer.Stop();
                 SetExpanded(true);
             }
+
+            if (e.OriginalSource is DependencyObject source && WantsKeyboard(source))
+            {
+                EnableKeyboard();
+            }
+        };
+
+        IslandRoot.AllowDrop = true;
+        IslandRoot.DragEnter += OnDragOver;
+        IslandRoot.DragOver += OnDragOver;
+        IslandRoot.DragLeave += (_, _) => Restart(collapseTimer, 900);
+        IslandRoot.Drop += (_, e) =>
+        {
+            var target = FindDropTarget(e.Data);
+            if (target is not null)
+            {
+                try
+                {
+                    target.Accept(e.Data);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("Dropping files on the island failed", ex);
+                }
+            }
+
+            e.Handled = true;
         };
     }
 
     public void RefreshText()
     {
         SettingsButton.ToolTip = Strings.Settings;
-        foreach (var (module, tab) in tabs)
+        foreach (var module in modules)
         {
-            tab.ToolTip = module.DisplayName;
+            if (tabs.TryGetValue(module, out var tab))
+            {
+                tab.ToolTip = module.DisplayName;
+            }
+
             try
             {
                 module.RefreshText();
@@ -205,28 +264,41 @@ public partial class IslandWindow : Window
         }
     }
 
-    public void SetSuppressed(bool value)
+    public void SetPresence(IslandPresence next)
     {
-        if (suppressed == value)
+        if (presence == next)
         {
             return;
         }
 
-        suppressed = value;
-        if (suppressed)
+        presence = next;
+        expandTimer.Stop();
+        collapseTimer.Stop();
+        if (presence != IslandPresence.Normal)
         {
-            expandTimer.Stop();
-            collapseTimer.Stop();
             expanded = false;
-            Retarget(animate: false);
-            Hide();
+            DisableKeyboard();
         }
-        else
+
+        if (presence == IslandPresence.Hidden)
+        {
+            Hide();
+            return;
+        }
+
+        if (!IsVisible)
         {
             Show();
             WindowStyler.BringToTop(handle);
             Reposition();
         }
+
+        Retarget(animate: true);
+    }
+
+    public void SetStripText(string text)
+    {
+        StripText.Text = text;
     }
 
     protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
@@ -240,6 +312,7 @@ public partial class IslandWindow : Window
         foreach (var module in modules)
         {
             module.ActivityChanged -= OnModuleActivityChanged;
+            module.AttentionRequested -= OnModuleAttention;
         }
 
         base.OnClosed(e);
@@ -247,11 +320,29 @@ public partial class IslandWindow : Window
         backdrop = null;
     }
 
-    private static void Restart(DispatcherTimer timer, int delayMs)
+    private static void Restart(DispatcherTimer timer, double delayMs)
     {
         timer.Stop();
         timer.Interval = TimeSpan.FromMilliseconds(Math.Max(1, delayMs));
         timer.Start();
+    }
+
+    private static bool WantsKeyboard(DependencyObject source)
+    {
+        for (var current = source; current is not null; current = VisualTreeHelper.GetParent(current) ?? LogicalTreeHelper.GetParent(current))
+        {
+            if (current is TextBoxBase or PasswordBox)
+            {
+                return true;
+            }
+
+            if (current is IslandWindow)
+            {
+                return false;
+            }
+        }
+
+        return false;
     }
 
     private static FrameworkElement? TryBuildView(IIslandModule module, Func<IIslandModule, FrameworkElement> pick)
@@ -280,14 +371,98 @@ public partial class IslandWindow : Window
         }
     }
 
+    private void EnableKeyboard()
+    {
+        if (keyboard)
+        {
+            return;
+        }
+
+        keyboard = true;
+        WindowStyler.SetActivatable(handle, true);
+        Activate();
+        NativeMethods.SetForegroundWindow(handle);
+    }
+
+    private void DisableKeyboard()
+    {
+        if (!keyboard)
+        {
+            return;
+        }
+
+        keyboard = false;
+        Keyboard.ClearFocus();
+        WindowStyler.SetActivatable(handle, false);
+    }
+
+    private IFileDropTarget? FindDropTarget(IDataObject data)
+    {
+        foreach (var target in modules.OfType<IFileDropTarget>())
+        {
+            try
+            {
+                if (target.CanAccept(data))
+                {
+                    return target;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("Checking a drop target failed", ex);
+            }
+        }
+
+        return null;
+    }
+
+    private void OnDragOver(object sender, DragEventArgs e)
+    {
+        var target = presence == IslandPresence.Normal ? FindDropTarget(e.Data) : null;
+        e.Effects = target is null ? DragDropEffects.None : DragDropEffects.Copy;
+        e.Handled = true;
+        if (target is IIslandModule module)
+        {
+            collapseTimer.Stop();
+            SelectTab(module);
+            SetExpanded(true);
+        }
+    }
+
     private void OnModuleActivityChanged(object? sender, EventArgs e)
     {
         Dispatcher.InvokeAsync(() => RefreshCompact(animate: true));
     }
 
+    private void OnModuleAttention(object? sender, EventArgs e)
+    {
+        if (sender is not IIslandModule module)
+        {
+            return;
+        }
+
+        Dispatcher.InvokeAsync(() =>
+        {
+            if (presence != IslandPresence.Normal)
+            {
+                return;
+            }
+
+            SelectTab(module);
+            if (!expanded)
+            {
+                SetExpanded(true);
+                Restart(collapseTimer, PeekDuration.TotalMilliseconds);
+            }
+        });
+    }
+
     private void RefreshCompact(bool animate)
     {
-        var active = modules.FirstOrDefault(SafeHasActivity) ?? modules.FirstOrDefault();
+        var active = modules.Where(SafeHasActivity).OrderBy(m => m.ActivityRank).FirstOrDefault()
+            ?? modules.FirstOrDefault(m => !m.ShowsTab)
+            ?? modules.FirstOrDefault();
+
         if (!ReferenceEquals(active, compactModule))
         {
             compactModule = active;
@@ -317,15 +492,20 @@ public partial class IslandWindow : Window
 
     private void SetExpanded(bool value)
     {
-        if (expanded == value || suppressed)
+        if (expanded == value || (value && presence != IslandPresence.Normal))
         {
             return;
         }
 
         expanded = value;
-        if (expanded && compactModule is not null && SafeHasActivity(compactModule))
+        if (expanded && compactModule is not null && compactModule.ShowsTab && SafeHasActivity(compactModule))
         {
             SelectTab(compactModule);
+        }
+
+        if (!expanded)
+        {
+            DisableKeyboard();
         }
 
         Retarget(animate: true);
@@ -340,7 +520,9 @@ public partial class IslandWindow : Window
 
     private double[] TargetValues()
     {
-        var shape = expanded ? IslandMetrics.Expanded : IslandMetrics.Compact(style, compactWidth);
+        var shape = presence == IslandPresence.Strip
+            ? IslandMetrics.Strip(style)
+            : expanded ? IslandMetrics.Expanded : IslandMetrics.Compact(style, compactWidth);
         return [shape.Width, shape.Height, shape.Radius, expanded ? 1 : 0];
     }
 
@@ -366,6 +548,7 @@ public partial class IslandWindow : Window
         var shoulder = notch ? IslandMetrics.ShoulderRadius : 0;
         var top = notch ? 0 : IslandMetrics.FloatingGap;
         var left = (IslandMetrics.WindowWidth - (width + (shoulder * 2))) / 2;
+        var strip = presence == IslandPresence.Strip;
 
         layout = new FrameLayout(left, top, width, height, radius, shoulder, notch);
 
@@ -380,12 +563,15 @@ public partial class IslandWindow : Window
 
         Canvas.SetLeft(CompactHost, (width - CompactHost.Width) / 2);
         Canvas.SetLeft(ExpandedHost, (width - ExpandedHost.Width) / 2);
+        Canvas.SetLeft(StripText, (width - IslandMetrics.StripTextWidth) / 2);
+        Canvas.SetTop(StripText, Math.Max(0, (height - 16) / 2));
 
-        CompactHost.Opacity = Math.Clamp(1 - (progress * 2.5), 0, 1);
+        CompactHost.Opacity = strip ? 0 : Math.Clamp(1 - (progress * 2.5), 0, 1);
         ExpandedHost.Opacity = Math.Clamp((progress - 0.35) / 0.65, 0, 1);
         CompactHost.Visibility = CompactHost.Opacity > 0 ? Visibility.Visible : Visibility.Hidden;
         ExpandedHost.Visibility = ExpandedHost.Opacity > 0 ? Visibility.Visible : Visibility.Hidden;
         ExpandedHost.IsHitTestVisible = progress > 0.6;
+        StripText.Visibility = strip && height < 30 ? Visibility.Visible : Visibility.Hidden;
 
         SyncBackdrop();
     }

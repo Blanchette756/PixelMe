@@ -8,7 +8,7 @@ using Windows.Media.Control;
 
 namespace PixelMe.Modules.Media;
 
-public sealed class MediaModule : IIslandModule
+public sealed class MediaModule(ModuleServices services) : IIslandModule
 {
     private readonly Dispatcher dispatcher = Dispatcher.CurrentDispatcher;
     private readonly SystemVolume volume = new();
@@ -21,6 +21,21 @@ public sealed class MediaModule : IIslandModule
     private bool disposed;
 
     public event EventHandler? ActivityChanged;
+
+    public event EventHandler? AttentionRequested
+    {
+        add
+        {
+        }
+
+        remove
+        {
+        }
+    }
+
+    public bool ShowsTab => true;
+
+    public int ActivityRank => 10;
 
     public string Id => "media";
 
@@ -298,7 +313,17 @@ public sealed class MediaModule : IIslandModule
             {
                 Art = artwork?.Image,
                 Accent = artwork?.Accent ?? MediaState.DefaultAccent,
+                Lyrics = null,
             });
+
+            if (services.Settings.Current.Lyrics)
+            {
+                var lyrics = await Lyrics.FindAsync(state.Artist, state.Title, state.Duration);
+                if (version == propertiesVersion && !disposed)
+                {
+                    Apply(state with { Lyrics = lyrics });
+                }
+            }
         }
         catch (Exception ex)
         {

@@ -19,6 +19,13 @@
             <Path x:Name="Outline" StrokeThickness="1" />
             <Canvas x:Name="Surface">
                 <ContentControl x:Name="CompactHost" Focusable="False" />
+                <TextBlock x:Name="StripText"
+                           Width="360"
+                           FontFamily="{StaticResource Island.MonoFont}"
+                           FontSize="11.5"
+                           FontWeight="SemiBold"
+                           TextAlignment="Center"
+                           Visibility="Hidden" />
                 <Grid x:Name="ExpandedHost">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="46" />

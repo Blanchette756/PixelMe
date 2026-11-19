@@ -19,8 +19,15 @@ public sealed class AppHost : IDisposable
 
     public SettingsStore Settings { get; }
 
-    public bool Start(Application app)
+    public bool IsPrimary => instance?.IsPrimary == true;
+
+    public bool Start(Application app, string[] args)
     {
+        if (Modules.Agents.AgentCommand.TryRun(args))
+        {
+            return false;
+        }
+
         startupClock.Start();
         instance = new SingleInstance();
         if (!instance.IsPrimary)

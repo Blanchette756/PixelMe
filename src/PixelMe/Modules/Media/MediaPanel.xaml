@@ -64,6 +64,13 @@
                            FontSize="16"
                            FontWeight="Medium"
                            TextTrimming="CharacterEllipsis" />
+                <TextBlock x:Name="LyricText"
+                           Margin="0,6,0,0"
+                           FontSize="13"
+                           FontStyle="Italic"
+                           Foreground="{DynamicResource Island.Secondary}"
+                           TextTrimming="CharacterEllipsis"
+                           Visibility="Collapsed" />
             </StackPanel>
 
             <StackPanel Grid.Column="2"

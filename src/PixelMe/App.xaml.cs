@@ -12,6 +12,7 @@ namespace PixelMe;
 public partial class App : Application
 {
     private AppHost? host;
+    private ModuleServices? services;
     private IslandWindow? island;
     private SystemIntegration? integration;
     private IReadOnlyList<IIslandModule> modules = [];
@@ -22,7 +23,7 @@ public partial class App : Application
 
         var settings = SettingsStore.Load();
         host = new AppHost(settings);
-        if (!host.Start(this))
+        if (!host.Start(this, e.Args))
         {
             Shutdown();
             return;
@@ -32,7 +33,8 @@ public partial class App : Application
         {
             await host.WaitUntilShellReadyAsync();
 
-            var initialization = ModuleLoader.InitializeAsync(ModuleCatalog.CreateAll());
+            services = new ModuleServices(settings);
+            var initialization = ModuleLoader.InitializeAsync(ModuleCatalog.CreateAll(services));
 
             Strings.Use(settings.Current.Language);
             var palette = ThemePalette.For(settings.Current.Theme);
@@ -47,7 +49,7 @@ public partial class App : Application
             island.Mount(modules);
             island.EnableInteraction();
 
-            integration = new SystemIntegration(host, island);
+            integration = new SystemIntegration(host, island, services);
 
             island.Show();
             integration.Start();
@@ -68,8 +70,15 @@ public partial class App : Application
         {
             ModuleLoader.SafeDispose(module);
         }
+
+        services?.Dispose();
+        var primary = host?.IsPrimary == true;
         host?.Dispose();
-        Log.Info("PixelMe stopped");
+        if (primary)
+        {
+            Log.Info("PixelMe stopped");
+        }
+
         base.OnExit(e);
     }
 }

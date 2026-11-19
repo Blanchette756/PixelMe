@@ -140,10 +140,14 @@ public partial class MediaPanel : UserControl
     {
         if (current.Duration <= TimeSpan.Zero)
         {
+            LyricText.Visibility = Visibility.Collapsed;
             return;
         }
 
         var position = current.CurrentPosition(DateTimeOffset.Now);
+        var line = Lyrics.LineAt(current.Lyrics, position);
+        LyricText.Text = line ?? string.Empty;
+        LyricText.Visibility = string.IsNullOrWhiteSpace(line) ? Visibility.Collapsed : Visibility.Visible;
         Progress.Progress = position.TotalMilliseconds / current.Duration.TotalMilliseconds;
         ElapsedText.Text = Format(position);
         RemainingText.Text = "-" + Format(current.Duration - position);
