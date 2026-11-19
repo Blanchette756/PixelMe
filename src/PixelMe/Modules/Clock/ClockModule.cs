@@ -27,7 +27,24 @@ public sealed class ClockModule : IIslandModule
 
     public int Priority => 100;
 
+    public bool HasActivity => true;
+
+    public double CompactWidth => 180;
+
     public FrameworkElement CompactView => compactView ??= BuildCompact();
+
+    public event EventHandler? ActivityChanged
+    {
+        add
+        {
+        }
+
+        remove
+        {
+        }
+    }
+
+    public void RefreshText() => Refresh();
 
     public FrameworkElement ExpandedView => expandedView ??= BuildExpanded();
 

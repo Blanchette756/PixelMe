@@ -61,6 +61,24 @@ public static class Strings
 
     public static string Clock => T("Clock", "Jam");
 
+    public static string Music => T("Music", "Musik");
+
+    public static string NothingPlaying => T("Nothing playing", "Tidak ada yang diputar");
+
+    public static string NothingPlayingHint => T(
+        "Play something in Spotify, YouTube or any media app.",
+        "Putar sesuatu di Spotify, YouTube, atau aplikasi musik lain.");
+
+    public static string UnknownTitle => T("Unknown title", "Judul tidak diketahui");
+
+    public static string Previous => T("Previous", "Sebelumnya");
+
+    public static string Next => T("Next", "Berikutnya");
+
+    public static string PlayPause => T("Play / pause", "Putar / jeda");
+
+    public static string Mute => T("Mute", "Bisukan");
+
     public static void Use(AppLanguage language)
     {
         useIndonesian = language switch

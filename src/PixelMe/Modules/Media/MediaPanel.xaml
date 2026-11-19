@@ -1,0 +1,127 @@
+<UserControl x:Class="PixelMe.Modules.Media.MediaPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:media="clr-namespace:PixelMe.Modules.Media">
+    <Grid>
+        <StackPanel x:Name="EmptyState"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Visibility="Collapsed">
+            <TextBlock HorizontalAlignment="Center"
+                       FontFamily="{StaticResource Island.IconFont}"
+                       FontSize="30"
+                       Foreground="{DynamicResource Island.Secondary}"
+                       Text="&#xE8D6;" />
+            <TextBlock x:Name="EmptyTitle"
+                       Margin="0,12,0,4"
+                       HorizontalAlignment="Center"
+                       FontSize="16"
+                       FontWeight="SemiBold" />
+            <TextBlock x:Name="EmptyHint"
+                       HorizontalAlignment="Center"
+                       FontSize="12.5"
+                       Foreground="{DynamicResource Island.Secondary}" />
+        </StackPanel>
+
+        <Grid x:Name="PlayerState">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <Border x:Name="ArtFrame"
+                    Width="92"
+                    Height="92"
+                    CornerRadius="18"
+                    Background="{DynamicResource Island.Subtle}">
+                <Grid>
+                    <TextBlock x:Name="ArtPlaceholder"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               FontFamily="{StaticResource Island.IconFont}"
+                               FontSize="30"
+                               Foreground="{DynamicResource Island.Secondary}"
+                               Text="&#xE8D6;" />
+                    <Border x:Name="ArtImage" CornerRadius="18" />
+                </Grid>
+            </Border>
+
+            <StackPanel Grid.Column="1"
+                        Margin="22,0,12,0"
+                        VerticalAlignment="Center">
+                <TextBlock x:Name="TitleText"
+                           FontSize="22"
+                           FontWeight="Bold"
+                           TextTrimming="CharacterEllipsis" />
+                <TextBlock x:Name="ArtistText"
+                           Margin="0,3,0,0"
+                           FontSize="16"
+                           FontWeight="Medium"
+                           TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="2"
+                        VerticalAlignment="Center"
+                        Orientation="Horizontal">
+                <Button x:Name="PreviousButton"
+                        Content="&#xE892;"
+                        Style="{StaticResource Island.MediaButton}" />
+                <Button x:Name="PlayPauseButton"
+                        Width="58"
+                        Height="58"
+                        Margin="4,0"
+                        FontSize="28"
+                        Content="&#xE769;"
+                        Style="{StaticResource Island.MediaButton}" />
+                <Button x:Name="NextButton"
+                        Content="&#xE893;"
+                        Style="{StaticResource Island.MediaButton}" />
+            </StackPanel>
+
+            <media:WaveProgress x:Name="Progress"
+                                Grid.Row="1"
+                                Grid.ColumnSpan="3"
+                                Height="22"
+                                Margin="0,12,0,0"
+                                Track="{DynamicResource Island.Subtle}"
+                                Thumb="{DynamicResource Island.Foreground}" />
+
+            <Grid Grid.Row="2"
+                  Grid.ColumnSpan="3"
+                  Margin="0,2,0,0">
+                <TextBlock x:Name="ElapsedText"
+                           HorizontalAlignment="Left"
+                           VerticalAlignment="Center"
+                           FontFamily="{StaticResource Island.MonoFont}"
+                           FontSize="13"
+                           FontWeight="SemiBold" />
+                <StackPanel HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Orientation="Horizontal">
+                    <Button x:Name="MuteButton"
+                            Width="26"
+                            Height="26"
+                            FontSize="13"
+                            Content="&#xE767;"
+                            Style="{StaticResource Island.IconButton}" />
+                    <Slider x:Name="VolumeSlider"
+                            Width="150"
+                            Margin="6,0,0,0"
+                            Style="{StaticResource Island.Slider}" />
+                </StackPanel>
+                <TextBlock x:Name="RemainingText"
+                           HorizontalAlignment="Right"
+                           VerticalAlignment="Center"
+                           FontFamily="{StaticResource Island.MonoFont}"
+                           FontSize="13"
+                           FontWeight="SemiBold" />
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>

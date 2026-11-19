@@ -5,23 +5,24 @@
     <Application.Resources>
         <FontFamily x:Key="Island.Font">Segoe UI Variable Display, Segoe UI</FontFamily>
         <FontFamily x:Key="Island.IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+        <FontFamily x:Key="Island.MonoFont">Cascadia Mono, Consolas</FontFamily>
         <SolidColorBrush x:Key="Island.Foreground" Color="White" />
         <SolidColorBrush x:Key="Island.Secondary" Color="#A0FFFFFF" />
         <SolidColorBrush x:Key="Island.Subtle" Color="#1AFFFFFF" />
         <SolidColorBrush x:Key="Island.Accent" Color="#34D399" />
 
         <Style x:Key="Island.IconButton" TargetType="Button">
-            <Setter Property="Width" Value="30" />
-            <Setter Property="Height" Value="30" />
+            <Setter Property="Width" Value="32" />
+            <Setter Property="Height" Value="32" />
             <Setter Property="Foreground" Value="{DynamicResource Island.Secondary}" />
             <Setter Property="FontFamily" Value="{StaticResource Island.IconFont}" />
-            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontSize" Value="15" />
             <Setter Property="Focusable" Value="False" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Chrome" Background="Transparent" CornerRadius="15">
+                        <Border x:Name="Chrome" Background="Transparent" CornerRadius="999">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
@@ -32,36 +33,121 @@
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="Chrome" Property="Opacity" Value="0.7" />
                             </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.3" />
+                            </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
 
+        <Style x:Key="Island.MediaButton" TargetType="Button" BasedOn="{StaticResource Island.IconButton}">
+            <Setter Property="Foreground" Value="{DynamicResource Island.Foreground}" />
+            <Setter Property="Width" Value="46" />
+            <Setter Property="Height" Value="46" />
+            <Setter Property="FontSize" Value="20" />
+        </Style>
+
         <Style x:Key="Island.TabButton" TargetType="RadioButton">
-            <Setter Property="Width" Value="34" />
-            <Setter Property="Height" Value="28" />
-            <Setter Property="Margin" Value="0,0,4,0" />
+            <Setter Property="Width" Value="38" />
+            <Setter Property="Height" Value="34" />
+            <Setter Property="Margin" Value="2,0" />
             <Setter Property="Foreground" Value="{DynamicResource Island.Secondary}" />
             <Setter Property="FontFamily" Value="{StaticResource Island.IconFont}" />
-            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontSize" Value="17" />
             <Setter Property="Focusable" Value="False" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="RadioButton">
-                        <Border x:Name="Chrome" Background="Transparent" CornerRadius="14">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Border>
+                        <Grid Background="Transparent">
+                            <Border x:Name="Chrome" CornerRadius="10" Background="Transparent" Margin="2,0,2,4" />
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,4" />
+                            <Ellipse x:Name="Dot"
+                                     Width="4"
+                                     Height="4"
+                                     HorizontalAlignment="Center"
+                                     VerticalAlignment="Bottom"
+                                     Fill="{DynamicResource Island.Foreground}"
+                                     Visibility="Hidden" />
+                        </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Island.Subtle}" />
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Island.Subtle}" />
                                 <Setter Property="Foreground" Value="{DynamicResource Island.Foreground}" />
+                                <Setter TargetName="Dot" Property="Visibility" Value="Visible" />
                             </Trigger>
                         </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="Island.SliderFill" TargetType="RepeatButton">
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <Grid Background="Transparent">
+                            <Border Height="4" CornerRadius="2" Background="{DynamicResource Island.Foreground}" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="Island.SliderEmpty" TargetType="RepeatButton">
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <Grid Background="Transparent" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="Island.SliderThumb" TargetType="Thumb">
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Grid Width="12" Height="18" Background="Transparent">
+                            <Ellipse Width="10" Height="10" Fill="{DynamicResource Island.Foreground}" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="Island.Slider" TargetType="Slider">
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Minimum" Value="0" />
+            <Setter Property="Maximum" Value="1" />
+            <Setter Property="SmallChange" Value="0.02" />
+            <Setter Property="LargeChange" Value="0.1" />
+            <Setter Property="IsMoveToPointEnabled" Value="True" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Slider">
+                        <Grid Height="18" Background="Transparent">
+                            <Border Height="4" CornerRadius="2" VerticalAlignment="Center" Background="{DynamicResource Island.Subtle}" />
+                            <Track x:Name="PART_Track" VerticalAlignment="Center">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="Slider.DecreaseLarge" Style="{StaticResource Island.SliderFill}" />
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="Slider.IncreaseLarge" Style="{StaticResource Island.SliderEmpty}" />
+                                </Track.IncreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Style="{StaticResource Island.SliderThumb}" />
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>

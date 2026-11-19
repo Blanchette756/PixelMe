@@ -25,7 +25,7 @@ public sealed class AppSettings
 {
     public IslandThemeKind Theme { get; set; } = IslandThemeKind.Glass;
 
-    public IslandStyle Style { get; set; } = IslandStyle.Floating;
+    public IslandStyle Style { get; set; } = IslandStyle.Notch;
 
     public AppLanguage Language { get; set; } = AppLanguage.Auto;
 
@@ -46,7 +46,7 @@ public sealed class AppSettings
 
         if (!Enum.IsDefined(Style))
         {
-            Style = IslandStyle.Floating;
+            Style = IslandStyle.Notch;
         }
 
         if (!Enum.IsDefined(Language))

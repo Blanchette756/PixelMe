@@ -6,14 +6,20 @@ namespace PixelMe.Native;
 internal static class NativeMethods
 {
     public const int GWL_EXSTYLE = -20;
+    public const long WS_POPUP = 0x80000000;
+    public const long WS_EX_TOPMOST = 0x00000008;
     public const long WS_EX_TOOLWINDOW = 0x00000080;
     public const long WS_EX_APPWINDOW = 0x00040000;
     public const long WS_EX_NOACTIVATE = 0x08000000;
 
     public const uint SWP_NOSIZE = 0x0001;
     public const uint SWP_NOMOVE = 0x0002;
+    public const uint SWP_NOZORDER = 0x0004;
     public const uint SWP_NOACTIVATE = 0x0010;
     public const uint SWP_FRAMECHANGED = 0x0020;
+
+    public const int SW_HIDE = 0;
+    public const int SW_SHOWNOACTIVATE = 4;
 
     public const int WM_DISPLAYCHANGE = 0x007E;
 
@@ -30,6 +36,13 @@ internal static class NativeMethods
 
     public const int DWMWA_TRANSITIONS_FORCEDISABLED = 3;
     public const int DWMWA_EXCLUDED_FROM_PEEK = 12;
+    public const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
+    public const int DWMWCP_DONOTROUND = 1;
+
+    public const int WCA_ACCENT_POLICY = 19;
+    public const int ACCENT_ENABLE_BLURBEHIND = 3;
+
+    public const int WINDING = 2;
 
     public const uint ASFW_ANY = 0xFFFFFFFF;
 
@@ -56,6 +69,20 @@ internal static class NativeMethods
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint uFlags);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+    [DllImport("user32.dll")]
+    public static extern int SetWindowRgn(IntPtr hWnd, IntPtr hRgn, [MarshalAs(UnmanagedType.Bool)] bool bRedraw);
+
+    [DllImport("gdi32.dll")]
+    public static extern IntPtr CreatePolygonRgn(POINT[] lppt, int cPoints, int fnPolyFillMode);
+
+    [DllImport("gdi32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool DeleteObject(IntPtr hObject);
 
     [DllImport("user32.dll")]
     public static extern IntPtr GetForegroundWindow();
@@ -104,6 +131,9 @@ internal static class NativeMethods
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool AllowSetForegroundWindow(uint dwProcessId);
 
+    [DllImport("user32.dll")]
+    private static extern int SetWindowCompositionAttribute(IntPtr hwnd, ref WINDOWCOMPOSITIONATTRIBDATA data);
+
     [DllImport("shell32.dll")]
     public static extern UIntPtr SHAppBarMessage(uint dwMessage, ref APPBARDATA pData);
 
@@ -133,6 +163,28 @@ internal static class NativeMethods
     {
         var monitor = MonitorFromPoint(default, MONITOR_DEFAULTTOPRIMARY);
         return TryGetMonitorBounds(monitor, out bounds);
+    }
+
+    public static bool EnableBlurBehind(IntPtr hwnd)
+    {
+        var accent = new ACCENT_POLICY { AccentState = ACCENT_ENABLE_BLURBEHIND };
+        var size = Marshal.SizeOf<ACCENT_POLICY>();
+        var pointer = Marshal.AllocHGlobal(size);
+        try
+        {
+            Marshal.StructureToPtr(accent, pointer, false);
+            var data = new WINDOWCOMPOSITIONATTRIBDATA
+            {
+                Attribute = WCA_ACCENT_POLICY,
+                Data = pointer,
+                SizeOfData = size,
+            };
+            return SetWindowCompositionAttribute(hwnd, ref data) != 0;
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(pointer);
+        }
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -173,5 +225,22 @@ internal static class NativeMethods
         public uint uEdge;
         public RECT rc;
         public IntPtr lParam;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct ACCENT_POLICY
+    {
+        public int AccentState;
+        public int AccentFlags;
+        public uint GradientColor;
+        public int AnimationId;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct WINDOWCOMPOSITIONATTRIBDATA
+    {
+        public int Attribute;
+        public IntPtr Data;
+        public int SizeOfData;
     }
 }

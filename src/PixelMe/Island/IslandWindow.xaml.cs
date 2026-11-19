@@ -18,9 +18,16 @@ public partial class IslandWindow : Window
     private readonly DispatcherTimer expandTimer;
     private readonly DispatcherTimer collapseTimer;
     private readonly SpringAnimator animator;
+    private readonly Dictionary<IIslandModule, RadioButton> tabs = [];
     private IReadOnlyList<IIslandModule> modules = [];
+    private IIslandModule? compactModule;
+    private GlassBackdrop? backdrop;
+    private FrameLayout layout;
     private IslandStyle style;
+    private double compactWidth = IslandMetrics.DefaultCompactWidth;
     private IntPtr handle;
+    private int windowX;
+    private int windowY;
     private bool expanded;
     private bool interactive;
     private bool suppressed;
@@ -32,8 +39,8 @@ public partial class IslandWindow : Window
 
         Width = IslandMetrics.WindowWidth;
         Height = IslandMetrics.WindowHeight;
-        ExpandedHost.Width = IslandMetrics.Expanded.Width - (IslandMetrics.BorderThickness * 2);
-        ExpandedHost.Height = IslandMetrics.Expanded.Height - (IslandMetrics.BorderThickness * 2);
+        ExpandedHost.Width = IslandMetrics.Expanded.Width;
+        ExpandedHost.Height = IslandMetrics.Expanded.Height;
         SettingsButton.Content = "";
         SettingsButton.Click += (_, _) => SettingsRequested?.Invoke();
 
@@ -51,14 +58,14 @@ public partial class IslandWindow : Window
         collapseTimer.Tick += (_, _) =>
         {
             collapseTimer.Stop();
-            if (!IslandBorder.IsMouseOver)
+            if (!IslandRoot.IsMouseOver)
             {
                 SetExpanded(false);
             }
         };
 
         animator = new SpringAnimator(TargetValues(), ApplyFrame);
-        RefreshText();
+        IsVisibleChanged += (_, _) => backdrop?.SetVisible(IsVisible);
     }
 
     public event Action? SettingsRequested;
@@ -67,7 +74,23 @@ public partial class IslandWindow : Window
 
     public void PrepareSurface(ThemePalette palette)
     {
-        handle = new WindowInteropHelper(this).EnsureHandle();
+        try
+        {
+            backdrop = new GlassBackdrop();
+        }
+        catch (Exception ex)
+        {
+            Log.Warn("Glass backdrop is unavailable", ex);
+            backdrop = null;
+        }
+
+        var helper = new WindowInteropHelper(this);
+        if (backdrop is not null)
+        {
+            helper.Owner = backdrop.Handle;
+        }
+
+        handle = helper.EnsureHandle();
         WindowStyler.MakeOverlay(handle);
         HwndSource.FromHwnd(handle)?.AddHook(WndProc);
         ApplyPalette(palette);
@@ -77,14 +100,15 @@ public partial class IslandWindow : Window
     public void ApplyPalette(ThemePalette palette)
     {
         palette.ApplyTo(Application.Current.Resources);
-        IslandBorder.Background = palette.Background;
-        IslandBorder.BorderBrush = palette.Border;
+        Outline.Fill = palette.Background;
+        Outline.Stroke = palette.Border;
+        backdrop?.SetEnabled(palette.UsesBackdrop);
+        SyncBackdrop();
     }
 
     public void ApplyStyle(IslandStyle next, bool animate)
     {
         style = next;
-        IslandBorder.Margin = new Thickness(0, style == IslandStyle.Floating ? IslandMetrics.FloatingGap : 0, 0, 0);
         SizeCompactHost();
         Retarget(animate);
         Reposition();
@@ -92,8 +116,14 @@ public partial class IslandWindow : Window
 
     public void Mount(IReadOnlyList<IIslandModule> ready)
     {
-        var mounted = new List<IIslandModule>();
+        foreach (var module in modules)
+        {
+            module.ActivityChanged -= OnModuleActivityChanged;
+        }
+
         TabStrip.Children.Clear();
+        tabs.Clear();
+        var mounted = new List<IIslandModule>();
 
         foreach (var module in ready.OrderBy(m => m.Priority))
         {
@@ -112,16 +142,13 @@ public partial class IslandWindow : Window
             };
             tab.Checked += (_, _) => Select(module);
             TabStrip.Children.Add(tab);
+            tabs[module] = tab;
+            module.ActivityChanged += OnModuleActivityChanged;
         }
 
         modules = mounted;
-        CompactHost.Content = modules.Select(m => TryBuildView(m, x => x.CompactView)).FirstOrDefault(v => v is not null);
-
-        if (TabStrip.Children.Count > 0 && TabStrip.Children[0] is RadioButton first)
-        {
-            first.IsChecked = true;
-        }
-
+        RefreshCompact(animate: false);
+        SelectTab(compactModule ?? modules.FirstOrDefault());
         RefreshText();
     }
 
@@ -133,7 +160,7 @@ public partial class IslandWindow : Window
         }
 
         interactive = true;
-        IslandBorder.MouseEnter += (_, _) =>
+        IslandRoot.MouseEnter += (_, _) =>
         {
             collapseTimer.Stop();
             if (!expanded)
@@ -142,7 +169,7 @@ public partial class IslandWindow : Window
             }
         };
 
-        IslandBorder.MouseLeave += (_, _) =>
+        IslandRoot.MouseLeave += (_, _) =>
         {
             expandTimer.Stop();
             if (expanded)
@@ -151,7 +178,7 @@ public partial class IslandWindow : Window
             }
         };
 
-        IslandBorder.PreviewMouseLeftButtonDown += (_, _) =>
+        IslandRoot.PreviewMouseLeftButtonDown += (_, _) =>
         {
             if (!expanded)
             {
@@ -164,18 +191,18 @@ public partial class IslandWindow : Window
     public void RefreshText()
     {
         SettingsButton.ToolTip = Strings.Settings;
-        foreach (var tab in TabStrip.Children.OfType<RadioButton>())
+        foreach (var (module, tab) in tabs)
         {
-            if (tab.Tag is IIslandModule module)
+            tab.ToolTip = module.DisplayName;
+            try
             {
-                tab.ToolTip = module.DisplayName;
+                module.RefreshText();
+            }
+            catch (Exception ex)
+            {
+                Log.Warn($"Module '{module.Id}' failed to refresh its text", ex);
             }
         }
-
-        var single = modules.Count == 1;
-        TabStrip.Visibility = single ? Visibility.Collapsed : Visibility.Visible;
-        HeaderTitle.Visibility = single ? Visibility.Visible : Visibility.Collapsed;
-        HeaderTitle.Text = single ? modules[0].DisplayName : string.Empty;
     }
 
     public void SetSuppressed(bool value)
@@ -208,6 +235,18 @@ public partial class IslandWindow : Window
         Dispatcher.InvokeAsync(Reposition, DispatcherPriority.Background);
     }
 
+    protected override void OnClosed(EventArgs e)
+    {
+        foreach (var module in modules)
+        {
+            module.ActivityChanged -= OnModuleActivityChanged;
+        }
+
+        base.OnClosed(e);
+        backdrop?.Dispose();
+        backdrop = null;
+    }
+
     private static void Restart(DispatcherTimer timer, int delayMs)
     {
         timer.Stop();
@@ -228,6 +267,49 @@ public partial class IslandWindow : Window
         }
     }
 
+    private static bool SafeHasActivity(IIslandModule module)
+    {
+        try
+        {
+            return module.HasActivity;
+        }
+        catch (Exception ex)
+        {
+            Log.Warn($"Module '{module.Id}' failed to report activity", ex);
+            return false;
+        }
+    }
+
+    private void OnModuleActivityChanged(object? sender, EventArgs e)
+    {
+        Dispatcher.InvokeAsync(() => RefreshCompact(animate: true));
+    }
+
+    private void RefreshCompact(bool animate)
+    {
+        var active = modules.FirstOrDefault(SafeHasActivity) ?? modules.FirstOrDefault();
+        if (!ReferenceEquals(active, compactModule))
+        {
+            compactModule = active;
+            CompactHost.Content = active is null ? null : TryBuildView(active, m => m.CompactView);
+        }
+
+        compactWidth = active?.CompactWidth ?? IslandMetrics.DefaultCompactWidth;
+        SizeCompactHost();
+        if (!expanded)
+        {
+            Retarget(animate);
+        }
+    }
+
+    private void SelectTab(IIslandModule? module)
+    {
+        if (module is not null && tabs.TryGetValue(module, out var tab))
+        {
+            tab.IsChecked = true;
+        }
+    }
+
     private void Select(IIslandModule module)
     {
         ExpandedContent.Content = TryBuildView(module, m => m.ExpandedView);
@@ -241,19 +323,24 @@ public partial class IslandWindow : Window
         }
 
         expanded = value;
+        if (expanded && compactModule is not null && SafeHasActivity(compactModule))
+        {
+            SelectTab(compactModule);
+        }
+
         Retarget(animate: true);
     }
 
     private void SizeCompactHost()
     {
-        var compact = IslandMetrics.Compact(style);
-        CompactHost.Width = compact.Width - (IslandMetrics.BorderThickness * 2);
-        CompactHost.Height = compact.Height - (IslandMetrics.BorderThickness * 2);
+        var compact = IslandMetrics.Compact(style, compactWidth);
+        CompactHost.Width = compact.Width;
+        CompactHost.Height = compact.Height;
     }
 
     private double[] TargetValues()
     {
-        var shape = expanded ? IslandMetrics.Expanded : IslandMetrics.Compact(style);
+        var shape = expanded ? IslandMetrics.Expanded : IslandMetrics.Compact(style, compactWidth);
         return [shape.Width, shape.Height, shape.Radius, expanded ? 1 : 0];
     }
 
@@ -271,53 +358,56 @@ public partial class IslandWindow : Window
 
     private void ApplyFrame(double[] values)
     {
-        var width = Math.Max(values[0], 12);
+        var width = Math.Max(values[0], 24);
         var height = Math.Max(values[1], 12);
         var radius = Math.Clamp(values[2], 0, Math.Min(width, height) / 2);
         var progress = Math.Clamp(values[3], 0, 1);
         var notch = style == IslandStyle.Notch;
+        var shoulder = notch ? IslandMetrics.ShoulderRadius : 0;
+        var top = notch ? 0 : IslandMetrics.FloatingGap;
+        var left = (IslandMetrics.WindowWidth - (width + (shoulder * 2))) / 2;
 
-        IslandBorder.Width = width;
-        IslandBorder.Height = height;
-        IslandBorder.CornerRadius = notch ? new CornerRadius(0, 0, radius, radius) : new CornerRadius(radius);
+        layout = new FrameLayout(left, top, width, height, radius, shoulder, notch);
 
-        var innerWidth = width - (IslandMetrics.BorderThickness * 2);
-        var innerHeight = height - (IslandMetrics.BorderThickness * 2);
-        Surface.Clip = BuildClip(innerWidth, innerHeight, Math.Max(0, radius - IslandMetrics.BorderThickness), notch);
+        Canvas.SetLeft(IslandRoot, left);
+        Canvas.SetTop(IslandRoot, top);
+        Outline.Data = IslandGeometry.Outline(width, height, radius, shoulder, notch, 0);
 
-        Canvas.SetLeft(CompactHost, (innerWidth - CompactHost.Width) / 2);
-        Canvas.SetLeft(ExpandedHost, (innerWidth - ExpandedHost.Width) / 2);
+        Canvas.SetLeft(Surface, shoulder);
+        Surface.Width = width;
+        Surface.Height = height;
+        Surface.Clip = IslandGeometry.Outline(width, height, radius, 0, notch, 1);
+
+        Canvas.SetLeft(CompactHost, (width - CompactHost.Width) / 2);
+        Canvas.SetLeft(ExpandedHost, (width - ExpandedHost.Width) / 2);
 
         CompactHost.Opacity = Math.Clamp(1 - (progress * 2.5), 0, 1);
         ExpandedHost.Opacity = Math.Clamp((progress - 0.35) / 0.65, 0, 1);
         CompactHost.Visibility = CompactHost.Opacity > 0 ? Visibility.Visible : Visibility.Hidden;
         ExpandedHost.Visibility = ExpandedHost.Opacity > 0 ? Visibility.Visible : Visibility.Hidden;
         ExpandedHost.IsHitTestVisible = progress > 0.6;
+
+        SyncBackdrop();
     }
 
-    private static Geometry BuildClip(double width, double height, double radius, bool notch)
+    private void SyncBackdrop()
     {
-        if (!notch)
+        if (backdrop is null || !backdrop.IsEnabled || handle == IntPtr.Zero)
         {
-            var rounded = new RectangleGeometry(new Rect(0, 0, width, height), radius, radius);
-            rounded.Freeze();
-            return rounded;
+            return;
         }
 
-        var geometry = new StreamGeometry();
-        using (var context = geometry.Open())
-        {
-            var size = new Size(radius, radius);
-            context.BeginFigure(new Point(0, 0), isFilled: true, isClosed: true);
-            context.LineTo(new Point(width, 0), isStroked: false, isSmoothJoin: false);
-            context.LineTo(new Point(width, height - radius), isStroked: false, isSmoothJoin: false);
-            context.ArcTo(new Point(width - radius, height), size, 0, false, SweepDirection.Clockwise, false, false);
-            context.LineTo(new Point(radius, height), isStroked: false, isSmoothJoin: false);
-            context.ArcTo(new Point(0, height - radius), size, 0, false, SweepDirection.Clockwise, false, false);
-        }
-
-        geometry.Freeze();
-        return geometry;
+        var dpi = VisualTreeHelper.GetDpi(this);
+        var total = layout.Width + (layout.Shoulder * 2);
+        var shape = IslandGeometry.Outline(layout.Width, layout.Height, layout.Radius, layout.Shoulder, layout.Notch, 1);
+        backdrop.Update(
+            windowX + (int)Math.Round(layout.Left * dpi.DpiScaleX),
+            windowY + (int)Math.Round(layout.Top * dpi.DpiScaleY),
+            (int)Math.Ceiling(total * dpi.DpiScaleX),
+            (int)Math.Ceiling(layout.Height * dpi.DpiScaleY),
+            shape,
+            dpi.DpiScaleX,
+            dpi.DpiScaleY);
     }
 
     private void Reposition()
@@ -329,15 +419,17 @@ public partial class IslandWindow : Window
 
         var dpi = VisualTreeHelper.GetDpi(this);
         var widthPx = (int)Math.Round(Width * dpi.DpiScaleX);
-        var x = screen.Left + ((screen.Width - widthPx) / 2);
+        windowX = screen.Left + ((screen.Width - widthPx) / 2);
+        windowY = screen.Top;
         NativeMethods.SetWindowPos(
             handle,
             NativeMethods.HWND_TOPMOST,
-            x,
-            screen.Top,
+            windowX,
+            windowY,
             0,
             0,
             NativeMethods.SWP_NOSIZE | NativeMethods.SWP_NOACTIVATE);
+        SyncBackdrop();
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -349,4 +441,13 @@ public partial class IslandWindow : Window
 
         return IntPtr.Zero;
     }
+
+    private readonly record struct FrameLayout(
+        double Left,
+        double Top,
+        double Width,
+        double Height,
+        double Radius,
+        double Shoulder,
+        bool Notch);
 }
